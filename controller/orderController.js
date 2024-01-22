@@ -1,62 +1,151 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    idFinder = require('../helpers/objectFinder.js'),
-    users = require('../database/users.json'),
-    orders = require('../database/orders.json'),
-    items = require('../database/items.json'),
-    dbPath = './database/orders.json',
-    fs = require('fs');
+    { Order, User, PaymentMethod } = require('../models')
 
 class OrderController {
 
-    static getAllOrders = (_, res) => {
-        res.status(200).json(responseJSON(orders))
+    static getAllOrders = async (_, res) => {
+
+        let orders
+        let status
+        let statusCode = 200
+        let message
+
+        try {
+            orders = await Order.findAll({})
+
+            if (!orders.value) {
+                throw error
+            }
+
+        } catch (error) {
+            status = 'failed'
+            message = 'No orders found'
+            statusCode = 404
+        }
+        res.status(statusCode).json(responseJSON(orders, status, message))
     }
 
-    static createNewOrder = (req, res) => {
+    static createNewOrder = async (req, res) => {
 
-        let { user_id, item_id, amount } = req.body
+        let { userId, paymentId, address } = req.body
+        let status = 'success'
+        let statusCode = 201
+        let messages = {}
+        let data = {}
 
-        let userFound = idFinder.idFinder(+user_id, users)
-        if (!userFound) {
-            return res.status(404).json(responseJSON(null, `User dengan id ${user_id} tidak ditemukan`))
+        if (userId == null) messages.user = 'UserId tidak boleh kosong'
+        if (paymentId == null) messages.payment = 'PaymentId tidak boleh kosong'
+
+        if (Object.keys(messages).length != 0) {
+            status = 'failed'
+            statusCode = 400
+            return res.status(statusCode).json(responseJSON(null, status, messages))
         }
 
-        let itemFound = idFinder.idFinder(+item_id, items)
-        if (!itemFound) {
-            return res.status(404).json(responseJSON(null, `Item dengan id ${item_id} tidak ditemukan`))
+        try {
+
+            let [userFound, paymentFound] = await Promise.allSettled([
+
+                User.findOne({
+                    where: {
+                        id: userId
+                    }
+                }),
+                PaymentMethod.findOne({
+                    where: {
+                        id: paymentId
+                    }
+                })
+
+            ])
+
+            if (!userFound.value) {
+                messages.user = `User with id ${userId} not found`
+            }
+
+            if (!paymentFound.value) {
+                messages.payment = `Payment Method with id ${paymentId} not found`
+            }
+
+            if (Object.keys(messages).length != 0) {
+                throw error
+            }
+
+            data = {
+                userId: userId,
+                paymentId: paymentId,
+                status: "waiting for order",
+                address: address ? address : userFound.value.address,
+                totalPrice: null
+            }
+
+            console.log(data)
+
+            await Order.create(data)
+
+        } catch (error) {
+            status = 'failed'
+            statusCode = 404
+            data = null
+            console.log("Error : ", error)
         }
 
-        const item = items.find((i) => i.id === +item_id)
+        return res.status(statusCode).json(responseJSON(data, status, messages))
 
-        const total_price = amount * item.price
-
-        let id = orders.length + 1
-
-        if (orders.length !== 0) {
-            id = orders[orders.length - 1].id + 1
-        }
-
-        let result = {
-            data: {
-                id: id,
-                user_id: user_id,
-                item_id: item_id,
-                amount: amount,
-                price: item.price,
-                total_price: total_price
-            },
-        }
-
-        orders.push(result.data)
-
-        fs.writeFileSync(dbPath, JSON.stringify(orders), 'utf-8')
-
-        res.status(201).json(responseJSON(result.data))
     }
 
-    static updateOrder = (req, res) => {
-        res.status(200).json(responseJSON(_, _))
+    static updateOrder = async (req, res) => {
+
+        let id = +req.params.id
+        let statusCode = 200
+        let status
+        let message
+        let order
+
+        try {
+
+            order = await Order.findOne({
+                where: {
+                    id: id
+                }
+            })
+
+            if (!order) {
+                status = 'failed'
+                statusCode = 404
+                message = `Category with id ${id} not found`
+                throw error
+            }
+
+            if (order.dataValues.status === 'order complete') {
+                status = 'failed'
+                statusCode = 409
+                message = `Order with id ${id} has been confirmed, please make a new order`
+                throw error
+            }
+
+            if(order.dataValues.status === "waiting for order") {
+                status = 'failed'
+                statusCode = 409
+                message = `Please add some product to order`
+                throw error
+            }
+
+            await Order.update({
+                status : 'order complete'
+            }, {
+                where :{
+                    id : id
+                }
+            })
+
+        } catch (error) {
+            return res.status(statusCode).json(responseJSON(null, status, message))
+        }
+
+        return res.status(statusCode).json(responseJSON(null))
+
     }
 
 }

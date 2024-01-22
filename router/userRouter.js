@@ -3,8 +3,11 @@ const
     userRouter = express.Router(),
     { UserController } = require('../controller/userController.js');
 
-userRouter.post('/register', UserController.register)
-userRouter.post('/login', UserController.login)
-userRouter.get('/users', UserController.getUser)
+userRouter
+    .get('/', UserController.getUser)
+    .post('/register', UserController.register)
+    .post('/login', UserController.login)
+    .delete('/:id', UserController.deleteUser)
+    .put('/:id', UserController.editUser)
 
 module.exports = userRouter
