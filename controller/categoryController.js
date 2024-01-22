@@ -1,5 +1,5 @@
 const { responseJSON } = require('../helpers/response');
-const { Category, Product } = require('../models')
+const { Category } = require('../models')
 
 class CategoryController {
     static getAllCategories = async (_, res) => {
