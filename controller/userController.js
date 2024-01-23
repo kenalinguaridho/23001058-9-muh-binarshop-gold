@@ -128,6 +128,7 @@ class UserController {
             await User.create(data)
 
         } catch (error) {
+            //Note: Pada dasarnya perlu mapping atau validasi lebih untuk menentukan sebuah error apakah memiliki status code tertentu seperti 400 atau 500. Bisa dipertimbangkan untuk melakukan mapping status code untuk error error yang mungkin terjadi. Note ini berlaku untuk endpoint lain
             status = 'failed'
             statusCode = 409
             data = null
