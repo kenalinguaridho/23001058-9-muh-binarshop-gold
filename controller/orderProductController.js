@@ -67,6 +67,7 @@ class OrderProductController {
 
             if (Object.keys(messages).length != 0) throw error
 
+            //Note: Disini bisa pakai transaction, jadi kalau 1 gagal yg lain bakal dicancel proses insert / updatenya
             // Insert array of product to order to OrderProducts
             await OrderProduct.bulkCreate(productArray)
 
@@ -95,6 +96,7 @@ class OrderProductController {
                     })
             }
 
+            //Note: Console.log bisa dihapus kalau tidak dipakai
             console.log("ERROR IS HERE")
 
         } catch (error) {

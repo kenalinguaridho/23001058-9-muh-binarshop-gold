@@ -79,7 +79,7 @@ class OrderController {
                 address: address ? address : userFound.value.address,
                 totalPrice: null
             }
-
+            //Note: Lognya hapus kalau tidak terpakai
             console.log(data)
 
             await Order.create(data)

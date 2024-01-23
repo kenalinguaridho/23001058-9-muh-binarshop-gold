@@ -11,7 +11,7 @@ class PaymentController {
         try {
 
             payments = await PaymentMethod.findAll({})
-
+            //Note: Console log bisa dihapus kalau tidak terpakai
             console.log(payments)
             if (!payments) {
                 throw error

@@ -17,6 +17,7 @@ class CategoryController {
                 })
 
             if (!categories) {
+                //Note: Harusnya ini akan error karena error disini tidak didefinisikan terlebih dahulu. Harusnya penggunaannya seperti ini throw new Error('error messagenya')
                 throw error
             }
 

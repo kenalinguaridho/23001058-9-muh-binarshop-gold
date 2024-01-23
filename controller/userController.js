@@ -79,6 +79,7 @@ class UserController {
         }
 
         try {
+            //Note: Ini where conditionnya bisa pakai or, jadi where querynya bakal username = .. OR email = .. OR phone = .., biar gaperlu 3x query kaya gini
             let [usernameDuplicate, emailDuplicate, phoneDuplicate] = await Promise.allSettled([
 
                 User.findOne({
@@ -244,6 +245,7 @@ class UserController {
                 throw error
             }
 
+            //Note: Ini juga bisa pakai or aja biar ga 3x query
             let [usernameDuplicate, emailDuplicate, phoneDuplicate] = await Promise.allSettled([
                 User.findOne({
                     where: {

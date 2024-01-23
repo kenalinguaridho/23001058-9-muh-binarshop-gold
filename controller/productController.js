@@ -58,7 +58,7 @@ class ProductController {
             if (result == null) {
                 throw error
             }
-
+            //Note: Console.log bisa dihapus aja kalo tidak terpakai
             console.log(result.dataValues)
 
         } catch (error) {
@@ -123,6 +123,7 @@ class ProductController {
                 throw error
             }
 
+            //Note: gapake await?
             Product.create(data)
 
         } catch (error) {
@@ -165,6 +166,7 @@ class ProductController {
                 throw error
             }
 
+            //Note: Karena cuma 1 await gaperlu pakai allSettled
             let [skuDuplicated] = await Promise.allSettled([
                 Product.findOne({
                     where: {
