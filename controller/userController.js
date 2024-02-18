@@ -10,143 +10,57 @@ class UserController {
     static register = async (req, res) => {
         let { name, username, email, phone, address, password, rePassword } = req.body
 
-        if (name == undefined) {
-            name = ""
-        }
-        if (username == undefined) {
-            username = ""
-        }
-        if (email == undefined) {
-            email = ""
-        }
-        if (phone == undefined) {
-            phone = ""
-        }
-        if (address == undefined) {
-            address = ""
-        }
-        if (password == undefined) {
-            password = ""
-        }
-        username = username.toLowerCase()
-        email = email.toLowerCase()
-
         let statusCode = 201
-        let status = 'success'
-        let data = {}
-        let messages = {}
-
-
-        if (name === "") {
-            messages.name = 'name cannot be empty'
-        }
-        if (username === "") {
-            messages.username = 'username cannot be empty'
-        }
-        if (email === "") {
-            messages.email = 'email cannot be empty'
-        }
-        if (phone === "") {
-            messages.phone = 'phone number cannot be empty'
-        }
-        if (address === "") {
-            messages.address = 'address cannot be empty'
-        }
-        if (password === "") {
-            messages.password = 'password cannot be empty'
-        }
-
-        if (Object.keys(messages).length != 0) {
-            status = 'failed'
-            return res.status(400).json(responseJSON(null, status, messages))
-        }
+        let status
 
         if (rePassword != password) {
-            status = 'failed'
-            return res.status(400).json(responseJSON(null, status, 'password is not consistent'))
-        }
-
-        if (!spaceChecker(username)) messages.username = 'username cannot contain spaces'
-        if (!spaceChecker(password)) messages.password = 'password cannot contain spaces'
-        if (!spaceChecker(email)) messages.email = 'email cannot contain spaces'
-
-        if (Object.keys(messages).length != 0) {
-
-            statusCode = 400
-            status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, messages))
-
+            return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
         }
 
         try {
-            let [usernameDuplicate, emailDuplicate, phoneDuplicate] = await Promise.allSettled([
-
-                User.findOne({
-                    where: {
-                        username: username
-                    }
-                }),
-                User.findOne({
-                    where: {
-                        email: email
-                    }
-                }),
-                User.findOne({
-                    where: {
-                        phone: phone
-                    }
-                })
-
-            ])
-
-            if (usernameDuplicate.value != null) {
-                messages.username = 'Username is already used'
-            }
-            if (emailDuplicate.value != null) {
-                messages.email = 'Email is already used'
-            }
-            if (phoneDuplicate.value != null) {
-                messages.phone = 'Phone Number is already used'
-            }
-
-            if (Object.keys(messages).length != 0) {
-                throw error
-            }
-
-            const hashPassword = bcrypt.hashSync(password, 10)
-
-            data = {
-                name: name,
-                username: username,
-                email: email,
-                phone: phone,
-                address: address,
-                password: hashPassword
+            let data = {
+                name: name ?? '',
+                username: username ?? '',
+                email: email ?? '',
+                phone: phone ?? '',
+                address: address ?? '',
+                password: password ?? ''
             }
 
             await User.create(data)
 
-        } catch (error) {
-            status = 'failed'
-            statusCode = 409
-            data = null
-        }
+            return res.status(statusCode).json(responseJSON(data, 'success', messages))
 
-        return res.status(statusCode).json(responseJSON(data, status, messages))
+
+        } catch (error) {
+
+            status = 'failed'
+
+            if (error.name === 'SequelizeUniqueConstraintError') {
+                statusCode = 409
+            } else if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            } else {
+                return res.status(500).json(responseJSON(null, status, 'Internal Server Error'))
+            }
+
+            return res.status(statusCode).json(responseJSON(null, status, error.errors[0].message))
+
+        }
 
     }
 
     static login = async (req, res) => {
-        let { username, password } = req.body
+        let { userLogin, password } = req.body
 
         let statusCode = 200
-        let status = 'success'
+        let status
         let message
 
-        username = username.toLowerCase()
+        userLogin = userLogin.toLowerCase()
 
         let data = {
-            username: username,
+            userLogin: userLogin,
             password: password
         }
 
@@ -154,28 +68,33 @@ class UserController {
 
             let user = await User.findOne({
                 where: {
-                    username: username
+                    [Op.or]: [{ username: userLogin }, { email: userLogin }]
                 }
             })
 
-            if (user == null) {
 
+            if (!user) {
+                message = `user not found`
+                statusCode = 404
+                throw error
             }
 
-            if (bcrypt.compareSync(password, user.dataValues.password) !== true) {
-                status = 'failed'
+            const passwordCompared = bcrypt.compareSync(password, user.dataValues.password)
+            
+            if (!passwordCompared) {
                 message = `password incorrect`
                 statusCode = 401
+                throw error
             }
+            
+            return res.status(statusCode).json(responseJSON(data, status))
 
         } catch (error) {
 
             status = 'failed'
-            message = `Username ${username} not found`
-            statusCode = 404
+            return res.status(statusCode).json(responseJSON(data, status, message))
 
         }
-        return res.status(statusCode).json(responseJSON(data, status, message))
 
     }
 
