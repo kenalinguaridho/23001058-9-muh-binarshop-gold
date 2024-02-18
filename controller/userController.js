@@ -11,7 +11,6 @@ class UserController {
         let { name, username, email, phone, address, password, rePassword } = req.body
 
         let statusCode = 201
-        let status
 
         if (rePassword != password) {
             return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
@@ -29,12 +28,12 @@ class UserController {
 
             await User.create(data)
 
-            return res.status(statusCode).json(responseJSON(data, 'success', messages))
+            return res.status(statusCode).json(responseJSON(data))
 
 
         } catch (error) {
 
-            status = 'failed'
+            let status = 'failed'
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
