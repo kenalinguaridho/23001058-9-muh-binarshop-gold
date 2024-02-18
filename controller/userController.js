@@ -1,6 +1,5 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { spaceChecker } = require("../helpers/spaceCheck.js"),
     { User } = require('../models'),
     { Op } = require("sequelize"),
     bcrypt = require('bcryptjs')
@@ -71,7 +70,6 @@ class UserController {
                 }
             })
 
-
             if (!user) {
                 message = `user not found`
                 statusCode = 404
@@ -98,6 +96,7 @@ class UserController {
     }
 
     static getUser = async (_, res) => {
+        
         let users
         let status = 'success'
         let statusCode = 200
@@ -112,6 +111,7 @@ class UserController {
         }
 
         return res.status(statusCode).json(responseJSON(users, status, message))
+
     }
 
     static editUser = async (req, res) => {
@@ -119,119 +119,50 @@ class UserController {
         let { name, username, email, phone, address, password, rePassword } = req.body
         let id = +req.params.id
 
-        if (username == undefined) {
-            username = ""
-        }
-        if (email == undefined) {
-            email = ""
-        }
-        if (phone == undefined) {
-            phone = ""
-        }
-
         let statusCode = 200
-        let status = 'success'
-        let data = {}
-        let messages = {}
+        let message
 
         if (rePassword != password) {
-            return res.status(400).json(responseJSON(null, status, 'password is not consistent'))
-        }
-
-        if (!spaceChecker(username)) messages.username = 'username cannot contain spaces'
-        if (!spaceChecker(password)) messages.password = 'password cannot contain spaces'
-        if (!spaceChecker(email)) messages.email = 'email cannot contain spaces'
-
-        if (Object.keys(messages).length != 0) {
             statusCode = 400
-            status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, messages))
+            message = 'password is not consistent'
+            throw error
         }
 
         try {
 
-            let user = await User.findOne({
-                where: {
-                    id: id
-                }
-            })
+            let user = await User.findByPk(id)
 
             if (!user) {
                 statusCode = 404
-                messages = `user with id ${id} not found`
+                message = `user with id ${id} not found`
                 throw error
             }
 
-            let [usernameDuplicate, emailDuplicate, phoneDuplicate] = await Promise.allSettled([
-                User.findOne({
-                    where: {
-                        username: username,
-                        id: {
-                            [Op.ne]: id
-                        }
-                    }
-                }),
-                User.findOne({
-                    where: {
-                        email: email,
-                        id: {
-                            [Op.ne]: +req.params.id
-                        }
-                    }
-                }),
-                User.findOne({
-                    where: {
-                        phone: phone,
-                        id: {
-                            [Op.ne]: +req.params.id
-                        }
-                    }
-                })
-            ])
-
-            if (usernameDuplicate.value != null) {
-                messages.username = 'Username is already used'
-            }
-            if (emailDuplicate.value != null) {
-                messages.email = 'Email is already used'
-            }
-            if (phoneDuplicate.value != null) {
-                messages.phone = 'Phone Number is already used'
-            }
-
-            if (Object.keys(messages).length != 0) {
-                statusCode = 409
-                throw error
-            }
-
-            const hashPassword = bcrypt.hashSync(password, 10)
-
-            username = username.toLowerCase()
-            email = email.toLowerCase()
-
-            data = {
+            const data = {
                 name: name ? name : user.dataValues.name,
                 username: username ? username : user.dataValues.username,
                 email: email ? email : user.dataValues.email,
                 phone: phone ? phone : user.dataValues.phone,
                 address: address ? address : user.dataValues.address,
-                password: hashPassword ? password : user.dataValues.password
+                password: password ? password : user.dataValues.password
             }
 
             await User.update(data, {
                 where: {
                     id: id
-                }
+                },
+                individualHooks : true
             })
+
+            return res.status(statusCode).json(responseJSON(data))
 
         } catch (error) {
 
-            status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, messages))
+            let status = 'failed'
+            return res.status(statusCode).json(responseJSON(null, status, message || error.errors[0].message))
 
         }
 
-        return res.status(statusCode).json(responseJSON(null, status))
     }
 
     static deleteUser = async (req, res) => {
@@ -248,13 +179,14 @@ class UserController {
 
             if (!user) throw error
 
+            return res.status(200).json(responseJSON(null, 'success'))
+
         } catch (error) {
 
             return res.status(404).json(responseJSON(null, 'failed', `user with id ${id} not found`))
 
         }
 
-        return res.status(200).json(responseJSON(null, 'success'))
     }
 
 }
