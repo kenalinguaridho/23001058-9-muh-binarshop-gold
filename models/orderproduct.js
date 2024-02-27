@@ -1,7 +1,5 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class OrderProduct extends Model {
     /**
@@ -11,8 +9,20 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      OrderProduct.belongsTo(models.Order, {
+        as: 'order',
+        foreignKey: 'orderId',
+        sourceKey: 'id'
+      })
+
+      OrderProduct.belongsTo(models.Product, {
+        as: 'product',
+        foreignKey: 'productId',
+        sourceKey: 'id'
+      })
     }
   }
+
   OrderProduct.init({
     orderId: DataTypes.INTEGER,
     productId: DataTypes.INTEGER,
@@ -21,8 +31,28 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'OrderProduct',
-    timestamps:true,
-    paranoid:true
+    timestamps: true,
+    paranoid: true
   });
+
+  OrderProduct.afterCreate(async (orderProduct) => {
+    try {
+
+      let product = await orderProduct.getProduct()
+
+      if (!product) {
+        throw error
+      }
+      
+      product.stock -= orderProduct.amount
+      await product.save()
+
+    } catch (error) {
+
+      console.log(error)
+      
+    }
+  })
+
   return OrderProduct;
 };
