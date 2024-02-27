@@ -29,7 +29,9 @@ class ProductController {
             message = 'No product found'
 
         }
+
         return res.status(statusCode).json(responseJSON(products, status, message))
+
     }
 
     static getProductById = async (req, res) => {
@@ -39,38 +41,38 @@ class ProductController {
         let status = 'success'
         let message
 
-        let result = {}
+        let product = {}
 
         try {
 
-            result = await Product.findOne({
+            product = await Product.findOne({
                 where: {
                     id: id
                 },
                 attributes: ['sku', 'name', 'description', 'price', 'stock'],
-                include: [{
+                include: {
                     model: Category,
+                    as:'category',
                     attributes: ['id', 'name']
-                }]
+                }
 
             })
 
-            if (result == null) {
+            if (!product) {
+                statusCode = 404
+                message = `No product with id ${id}`
                 throw error
             }
-
-            console.log(result.dataValues)
 
         } catch (error) {
 
             status = 'failed'
-            statusCode = 404
-            message = `No product with id ${id}`
-            result = null
+            product = null
+            console.log(error)
 
         }
 
-        return res.status(statusCode).json(responseJSON(result, status, message))
+        return res.status(statusCode).json(responseJSON(product, status, message))
 
     }
 
@@ -111,6 +113,18 @@ class ProductController {
 
         try {
 
+            let category = await Category.findOne({
+                where : {
+                    id : categoryId
+                }
+            })
+
+            if (category == null) {
+                statusCode = 404
+                messages.category = `Category with id ${categoryId} not found`
+                throw error
+            }
+
             let skuDuplicated = await Product.findOne({
                 where: {
                     sku: data.sku
@@ -119,7 +133,7 @@ class ProductController {
 
             if (skuDuplicated != null) {
                 statusCode = 409
-                messages.username = 'sku is already used'
+                messages.sku = 'sku is already used'
                 throw error
             }
 
@@ -152,7 +166,6 @@ class ProductController {
         if (stock == undefined) stock = ""
 
         try {
-
 
             let product = await Product.findOne({
                 where: {
@@ -218,15 +231,15 @@ class ProductController {
 
         try {
             await Product.destroy({
-                where : {
-                    id:id
+                where: {
+                    id: id
                 }
             })
         } catch (error) {
             status = 'failed'
             message = `Product with id ${id} not found`
         }
-        
+
         return res.status(statusCode).json(responseJSON(null, status, message))
 
     }

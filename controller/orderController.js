@@ -114,14 +114,14 @@ class OrderController {
             if (!order) {
                 status = 'failed'
                 statusCode = 404
-                message = `Category with id ${id} not found`
+                message = `Order with id ${id} not found`
                 throw error
             }
 
             if (order.dataValues.status === 'order complete') {
                 status = 'failed'
                 statusCode = 409
-                message = `Order with id ${id} has been confirmed, please make a new order`
+                message = `Order with id ${id} has been completed, please make a new order`
                 throw error
             }
 

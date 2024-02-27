@@ -2,7 +2,10 @@ const
     { responseJSON } = require('../helpers/response.js'),
     { User } = require('../models'),
     { Op } = require("sequelize"),
-    bcrypt = require('bcryptjs')
+    bcrypt = require('bcryptjs'),
+    jwt = require('jsonwebtoken');
+
+require('dotenv').config()
 
 class UserController {
 
@@ -34,6 +37,8 @@ class UserController {
 
             let status = 'failed'
 
+            console.log(error)
+
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
             } else if (error.name === 'SequelizeValidationError') {
@@ -57,11 +62,6 @@ class UserController {
 
         userLogin = userLogin.toLowerCase()
 
-        let data = {
-            userLogin: userLogin,
-            password: password
-        }
-
         try {
 
             let user = await User.findOne({
@@ -83,6 +83,15 @@ class UserController {
                 statusCode = 401
                 throw error
             }
+            
+            const data = {
+                id: user.dataValues.id,
+                username: user.dataValues.username
+            }
+
+            let accessToken = jwt.sign(data, process.env.SECRET_KEY)
+
+            data.accessToken = accessToken
             
             return res.status(statusCode).json(responseJSON(data, status))
 
