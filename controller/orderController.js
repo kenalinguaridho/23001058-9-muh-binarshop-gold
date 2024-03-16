@@ -80,8 +80,6 @@ class OrderController {
                 totalPrice: null
             }
 
-            console.log(data)
-
             await Order.create(data)
 
         } catch (error) {

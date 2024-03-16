@@ -20,6 +20,9 @@ class OrderProductController {
                             as: 'user',
                             attributes: ['id', 'name', 'username']
                         },
+                        where : {
+                            userId: req.user.id
+                        }
                     },
                     {
                         model: Product,
@@ -27,8 +30,6 @@ class OrderProductController {
                         attributes: ['id', 'name', 'price']
                     }]
             })
-
-            // console.log(orderProducts)
 
         } catch (error) {
             console.log(error)
@@ -41,7 +42,7 @@ class OrderProductController {
     static createNewOrderProduct = async (req, res) => {
 
         // Read properties from request body 
-        let { orderId, products } = req.body
+        let { paymentId, products, address } = req.body
 
         // Early variable declaration
         let statusCode = 201
@@ -50,24 +51,22 @@ class OrderProductController {
         let product
         let total_price = 0
 
+        // Transaction begin
         const t = await sequelize.transaction()
 
         try {
 
-            // Find the order
-            let order = await Order.findByPk(orderId)
+            const user = await User.findByPk(req.user.id)
 
-            // Check if the order exist in db
-            if (order == null) {
-                messages.order = `Order with id ${orderId} not found`
-                throw error
+            let orderPayload = {
+                userId: req.user.id,
+                paymentId: paymentId,
+                status: 'waiting to confirm',
+                address: address ?? user.dataValues.address,
+                totalPrice: 0
             }
 
-            // Check the order status, is it a complete order or not
-            if (order.dataValues.status === 'order complete') {
-                messages.order = 'Order has been completed, please make a new order'
-                throw error
-            }
+            let order = await Order.create(orderPayload, { transaction: t })
 
             // Loop to check every product to order
             for (let i = 0; i < products.length; i++) {
@@ -93,43 +92,34 @@ class OrderProductController {
                 let sub_total = products[i].amount * product.dataValues.price
                 total_price += sub_total
 
-                let data = {
-                    orderId: orderId,
+                // Create payload for orderProduct for each product inserted
+                let orderProductPayload = {
+                    orderId: order.dataValues.id,
                     productId: products[i].id,
                     amount: products[i].amount,
                     subTotal: sub_total
                 }
 
-                productArray.push(data)
-
-                await OrderProduct.create(data, { transaction: t })
+                // Store all payload into an array to bulk insert
+                productArray.push(orderProductPayload)
 
             }
 
-            // Update Order with new totalPrice and status
-            await Order.update(
-                {
-                    totalPrice: order.dataValues.totalPrice + total_price,
-                    status: "waiting to confirm",
-                },
-                {
-                    where: {
-                        id: orderId
-                    },
+            // Bulk insert into OrderProduct table
+            await OrderProduct.bulkCreate(productArray, { transaction: t })
 
-                },
-                {
-                    transaction: t
-                })
+            // Update totalPrice in Order table
+            await order.increment({ 'totalPrice': total_price }, { transaction: t })
 
-            // After all the things above complete it will commit to store al the data and changes
             await t.commit()
 
         } catch (error) {
 
             await t.rollback()
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', messages))
+            statusCode = 400
+
+            return res.status(statusCode).json(responseJSON(null, 'failed', error))
 
         }
 

@@ -37,6 +37,49 @@ class UserController {
 
             let status = 'failed'
 
+            if (error.name === 'SequelizeUniqueConstraintError') {
+                statusCode = 409
+            } else if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            } else {
+                return res.status(500).json(responseJSON(null, status, 'Internal Server Error'))
+            }
+
+            return res.status(statusCode).json(responseJSON(null, status, error.errors[0].message))
+
+        }
+
+    }
+
+    static registerAdmin = async (req, res) => {
+        let { name, username, email, phone, address, password, rePassword } = req.body
+
+        let statusCode = 201
+
+        if (rePassword != password) {
+            return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
+        }
+
+        try {
+            let data = {
+                name: name ?? '',
+                username: username ?? '',
+                email: email ?? '',
+                phone: phone ?? '',
+                address: address ?? '',
+                isAdmin: true,
+                password: password ?? ''
+            }
+
+            await User.create(data)
+
+            return res.status(statusCode).json(responseJSON(data))
+
+
+        } catch (error) {
+
+            let status = 'failed'
+
             console.log(error)
 
             if (error.name === 'SequelizeUniqueConstraintError') {
@@ -86,7 +129,8 @@ class UserController {
             
             const data = {
                 id: user.dataValues.id,
-                username: user.dataValues.username
+                username: user.dataValues.username,
+                isAdmin: user.dataValues.isAdmin
             }
 
             let accessToken = jwt.sign(data, process.env.SECRET_KEY)
