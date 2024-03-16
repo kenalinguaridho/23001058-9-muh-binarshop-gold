@@ -92,7 +92,7 @@ class CategoryController {
 
             status = 'failed'
             statusCode = 400
-            return res.status(statusCode).json(responseJSON(null, status, error.errors[0].message))
+            return res.status(statusCode).json(responseJSON(null, status, error.errors[0].message ?? error))
 
         }
 
