@@ -1,10 +1,11 @@
+require('dotenv').config()
 const
     express = require('express'),
     app = express(),
-    { PORT } = require('./config/config.js'),
     indexRouter = require('./router/indexRouter.js'),
-    morgan = require('morgan')
-
+    morgan = require('morgan'),
+    PORT = process.env.PORT
+    
 app.use(express.json())
 app.use(morgan('dev'))
 
