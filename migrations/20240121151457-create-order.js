@@ -25,6 +25,10 @@ module.exports = {
           model: 'PaymentMethods'
         }
       },
+      expiresIn: {
+        allowNull: false,
+        type: Sequelize.DATE
+      },
       status: {
         type: Sequelize.STRING,
         allowNull: false
