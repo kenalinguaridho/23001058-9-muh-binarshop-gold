@@ -4,6 +4,7 @@ const
     { Op } = require("sequelize"),
     bcrypt = require('bcryptjs'),
     jwt = require('jsonwebtoken');
+const { mailer } = require('../lib/mailer.js');
 
 require('dotenv').config()
 
@@ -28,7 +29,9 @@ class UserController {
                 password: password ?? ''
             }
 
-            await User.create(data)
+            let result = await User.create(data)
+            
+            mailer(result)
 
             return res.status(statusCode).json(responseJSON(data))
 
