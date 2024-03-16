@@ -29,30 +29,27 @@ module.exports = (sequelize, DataTypes) => {
     amount: DataTypes.INTEGER,
     subTotal: DataTypes.REAL
   }, {
+    hooks: {
+      afterBulkCreate: async (orderProduct) => {
+        try {
+          
+          for (let i = 0; i < orderProduct.length; i++) {
+            let product = await orderProduct[i].getProduct()
+            product.stock -= orderProduct[i].amount
+            total_price += orderProduct[i].subTotal
+            await product.save()
+          }
+
+        } catch (error) {
+          console.log(error)
+        }
+      }
+    },
     sequelize,
     modelName: 'OrderProduct',
     timestamps: true,
     paranoid: true
   });
-
-  OrderProduct.afterCreate(async (orderProduct) => {
-    try {
-
-      let product = await orderProduct.getProduct()
-
-      if (!product) {
-        throw error
-      }
-      
-      product.stock -= orderProduct.amount
-      await product.save()
-
-    } catch (error) {
-
-      console.log(error)
-      
-    }
-  })
 
   return OrderProduct;
 };

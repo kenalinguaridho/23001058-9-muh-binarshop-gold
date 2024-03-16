@@ -85,6 +85,9 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+    isAdmin:{
+      type: DataTypes.BOOLEAN
+    },
     password: {
       type: DataTypes.STRING,
       validate: {
