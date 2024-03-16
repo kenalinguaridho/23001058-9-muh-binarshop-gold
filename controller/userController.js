@@ -142,13 +142,13 @@ class UserController {
         } catch (error) {
 
             status = 'failed'
-            return res.status(statusCode).json(responseJSON(data, status, message))
+            return res.status(statusCode).json(responseJSON(null, status, message))
 
         }
 
     }
 
-    static getUser = async (_, res) => {
+    static getUser = async (req, res) => {
         
         let users
         let status = 'success'
@@ -156,7 +156,7 @@ class UserController {
         let message
 
         try {
-            users = await User.findAll({})
+            users = await User.findByPk(req.user.id)
         } catch (error) {
             status = 'failed'
             statusCode = 404
@@ -170,7 +170,7 @@ class UserController {
     static editUser = async (req, res) => {
 
         let { name, username, email, phone, address, password, rePassword } = req.body
-        let id = +req.params.id
+        let id = req.user.id
 
         let statusCode = 200
         let message
@@ -220,7 +220,7 @@ class UserController {
 
     static deleteUser = async (req, res) => {
 
-        let id = +req.params.id
+        let id = +req.user.id
 
         try {
 
