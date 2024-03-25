@@ -2,23 +2,28 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('PaymentMethods', {
+    await queryInterface.createTable('Addresses', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID
       },
-      name: {
-        type: Sequelize.STRING
+      userId: {
+        type: Sequelize.UUID,
+        references: {
+          key: 'id',
+          model: 'Users'
+        }
+      },
+      address: {
+        type: Sequelize.TEXT
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: new Date()
+        type: Sequelize.DATE
       },
       updatedAt: {
-        allowNull: true,
+        allowNull: false,
         type: Sequelize.DATE
       },
       deletedAt: {
@@ -28,6 +33,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('PaymentMethods');
+    await queryInterface.dropTable('Addresses');
   }
 };

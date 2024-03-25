@@ -14,7 +14,14 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   PaymentMethod.init({
-    name: DataTypes.STRING
+    name: {
+      type: DataTypes.STRING,
+      validate: {
+        notEmpty: {
+          msg: `category name can't contain empty string`
+        }
+      }
+    }
   }, {
     sequelize,
     modelName: 'PaymentMethod',

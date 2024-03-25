@@ -17,11 +17,71 @@ module.exports = (sequelize, DataTypes) => {
   }
   Product.init({
     categoryId: DataTypes.INTEGER,
-    sku: DataTypes.STRING,
-    name: DataTypes.STRING,
-    description: DataTypes.TEXT,
-    price: DataTypes.REAL,
-    stock: DataTypes.INTEGER
+    sku: {
+      type: DataTypes.STRING,
+      validate: {
+        notNull: {
+          args: 'sku should be in request body'
+        },
+        notEmpty: {
+          msg: `category name can't contain empty string`
+        }
+      }
+    },
+    name: {
+      type: DataTypes.STRING,
+      validate: {
+        notNull: {
+          args: 'name should be in request body'
+        },
+        notEmpty: {
+          msg: `category name can't contain empty string`
+        }
+      }
+    },
+    description: {
+      type: DataTypes.TEXT,
+      validate: {
+        notNull: {
+          args: 'description should be in request body'
+        },
+        notEmpty: {
+          msg: `description can't contain empty string`
+        }
+      }
+    },
+    price: {
+      type: DataTypes.REAL,
+      validate: {
+        is: {
+          args: 0,
+          msg: `price can't be 0`
+        },
+        notNull: {
+          args: 'price should be in request body'
+        },
+        isNumeric: {
+          args: true,
+          msg: 'please input valid number'
+        },
+      }
+    },
+    stock: {
+      type: DataTypes.INTEGER,
+      validate: {
+        is: {
+          args: 0,
+          msg: `price can't be 0`
+        },
+        notNull: {
+          args: 'price should be in request body'
+        },
+        isInt: {
+          args: true,
+          msg: 'please input valid number'
+        },
+      }
+    }
   }, {
     sequelize,
     modelName: 'Product',

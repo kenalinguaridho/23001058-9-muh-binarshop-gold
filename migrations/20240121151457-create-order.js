@@ -5,12 +5,11 @@ module.exports = {
     await queryInterface.createTable('Orders', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID
       },
       userId: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
         allowNull: false,
         references: {
           key: 'id',
@@ -25,7 +24,7 @@ module.exports = {
           model: 'PaymentMethods'
         }
       },
-      expiresIn: {
+      expiresOn: {
         allowNull: false,
         type: Sequelize.DATE
       },
@@ -33,9 +32,12 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
-      address : {
-        type: Sequelize.TEXT,
-        allowNull:false
+      addressId : {
+        type: Sequelize.UUID,
+        references: {
+          key: 'id',
+          model: 'Addresses'
+        }
       },
       totalPrice: {
         type: Sequelize.REAL,
@@ -49,13 +51,11 @@ module.exports = {
       },
       updatedAt: {
         allowNull: true,
-        type: Sequelize.DATE,
-        defaultValue: null
+        type: Sequelize.DATE
       },
       deletedAt: {
         allowNull: true,
-        type: Sequelize.DATE,
-        defaultValue: null
+        type: Sequelize.DATE
       }
     });
   },

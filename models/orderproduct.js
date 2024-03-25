@@ -10,41 +10,49 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       OrderProduct.belongsTo(models.Order, {
-        as: 'order',
-        foreignKey: 'orderId',
-        sourceKey: 'id'
+        targetKey: 'id',
+        foreignKey: 'orderId'
       })
 
       OrderProduct.belongsTo(models.Product, {
-        as: 'product',
+        targetKey: 'id',
         foreignKey: 'productId',
-        sourceKey: 'id'
       })
     }
   }
 
   OrderProduct.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
     orderId: DataTypes.INTEGER,
-    productId: DataTypes.INTEGER,
-    amount: DataTypes.INTEGER,
-    subTotal: DataTypes.REAL
-  }, {
-    hooks: {
-      afterBulkCreate: async (orderProduct) => {
-        try {
-          
-          for (let i = 0; i < orderProduct.length; i++) {
-            let product = await orderProduct[i].getProduct()
-            product.stock -= orderProduct[i].amount
-            total_price += orderProduct[i].subTotal
-            await product.save()
-          }
-
-        } catch (error) {
-          console.log(error)
-        }
+    productId: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: `product id can't contain empty number`
+        },
+        isInt: {
+          args: true,
+          msg: 'please input valid number'
+        },
       }
     },
+    amount: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: `product id can't contain empty number`
+        },
+        isInt: {
+          args: true,
+          msg: 'please input valid number'
+        },
+      }
+    },
+    subTotal: DataTypes.REAL
+  }, {
     sequelize,
     modelName: 'OrderProduct',
     timestamps: true,

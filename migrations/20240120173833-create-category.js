@@ -19,13 +19,11 @@ module.exports = {
       },
       updatedAt: {
         allowNull: true,
-        type: Sequelize.DATE,
-        defaultValue: null
+        type: Sequelize.DATE
       },
       deletedAt: {
         allowNull: true,
-        type: Sequelize.DATE,
-        defaultValue: null
+        type: Sequelize.DATE
       }
     });
   },

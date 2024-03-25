@@ -13,31 +13,51 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       Order.hasMany(models.OrderProduct, {
         as: 'orderProducts',
-        foreignKey: 'orderId',
-        sourceKey: 'id'
+        sourceKey: 'id',
+        foreignKey: 'orderId'
       }),
 
       Order.belongsTo(models.User, {
-        as:'user',
-        foreignKey : 'userId',
-        sourceKey:'id'
+        targetKey: 'id',
+        foreignKey : 'userId'
       })
 
       Order.belongsTo(models.PaymentMethod, {
-        as: 'payment'
+        targetKey: 'id',
+        foreignKey: 'paymentMethodId'
+      })
+
+      Order.belongsTo(models.Address, {
+        targetKey: 'id',
+        foreignKey: 'addressId'
       })
     }
   }
   Order.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
     userId: DataTypes.INTEGER,
-    paymentId: DataTypes.INTEGER,
+    paymentId: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: `product id can't contain empty number`
+        },
+        isInt: {
+          args: true,
+          msg: 'please input valid number'
+        },
+      }
+    },
     status: DataTypes.STRING,
-    expiresIn: {
+    expiresOn: {
       type: DataTypes.DATE,
       defaultValue: new Date(new Date().setHours(new Date().getHours() + 2))
     },
     totalPrice: DataTypes.REAL,
-    address: DataTypes.TEXT
+    addressId: DataTypes.UUID
   }, {
     sequelize,
     modelName: 'Order',

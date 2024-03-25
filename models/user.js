@@ -14,19 +14,31 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       User.hasMany(models.Order, {
         as: 'orders',
-        foreignKey: 'userId',
-        sourceKey: 'id'
+        sourceKey: 'id',
+        foreignKey: 'userId'
+      })
+      User.hasMany(models.Address, {
+        as: 'address',
+        sourceKey: "id",
+        foreignKey: 'userId'
       })
     }
   }
   User.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
     name: {
       type: DataTypes.STRING,
-      validate: {
-        notEmpty: {
-          msg: `name can't contain empty string`
+        validate: {
+          notNull: {
+            args: 'name should be in request body'
+          },
+          notEmpty: {
+            msg: `name can't contain empty string`
+          }
         }
-      }
     },
     username: {
       type: DataTypes.STRING,
@@ -35,6 +47,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       allowNull: false,
       validate: {
+        notNull: {
+          args: 'username should be in request body'
+        },
         notContains: {
           args: ' ',
           msg: `username can't contain spaces`
@@ -50,8 +65,11 @@ module.exports = (sequelize, DataTypes) => {
         msg: 'email is already used'
       },
       validate: {
+        notNull: {
+          args: 'email should be in request body'
+        },
         isEmail : {
-          msg : `this field must contain valid email`
+          msg : `email field must contain valid email`
         },
         notContains: {
           args: ' ',
@@ -68,6 +86,9 @@ module.exports = (sequelize, DataTypes) => {
         msg: 'phone number is already used'
       },
       validate: {
+        notNull: {
+          args: 'phone number should be in request body'
+        },
         notContains: {
           args: ' ',
           msg: `phone number can't contain spaces`
@@ -77,20 +98,15 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
-    address: {
-      type: DataTypes.STRING,
-      validate: {
-        notEmpty: {
-          msg: `address can't contain empty string`
-        }
-      }
-    },
     isAdmin:{
       type: DataTypes.BOOLEAN
     },
     password: {
       type: DataTypes.STRING,
       validate: {
+        notNull: {
+          args: 'password should be in request body'
+        },
         notEmpty: {
           msg: `password can't contain empty string`
         }
