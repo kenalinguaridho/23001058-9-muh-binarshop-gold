@@ -27,18 +27,20 @@ module.exports = (sequelize, DataTypes) => {
   User.init({
     id: {
       type: DataTypes.UUID,
+      primaryKey: true,
       defaultValue: DataTypes.UUIDV4
     },
     name: {
       type: DataTypes.STRING,
-        validate: {
-          notNull: {
-            args: 'name should be in request body'
-          },
-          notEmpty: {
-            msg: `name can't contain empty string`
-          }
+      allowNull: false,
+      validate: {
+        notNull: {
+          args: 'name should be in request body'
+        },
+        notEmpty: {
+          msg: `name can't contain empty string`
         }
+      }
     },
     username: {
       type: DataTypes.STRING,
@@ -61,6 +63,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     email: {
       type: DataTypes.STRING,
+      allowNull: false,
       unique: {
         msg: 'email is already used'
       },
@@ -68,8 +71,8 @@ module.exports = (sequelize, DataTypes) => {
         notNull: {
           args: 'email should be in request body'
         },
-        isEmail : {
-          msg : `email field must contain valid email`
+        isEmail: {
+          msg: `email field must contain valid email`
         },
         notContains: {
           args: ' ',
@@ -82,6 +85,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     phone: {
       type: DataTypes.STRING,
+      allowNull: false,
       unique: {
         msg: 'phone number is already used'
       },
@@ -98,11 +102,15 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
-    isAdmin:{
+    isAdmin: {
+      type: DataTypes.BOOLEAN
+    },
+    isActive: {
       type: DataTypes.BOOLEAN
     },
     password: {
       type: DataTypes.STRING,
+      allowNull: false,
       validate: {
         notNull: {
           args: 'password should be in request body'

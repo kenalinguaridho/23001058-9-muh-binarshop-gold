@@ -16,9 +16,15 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Product.init({
+    id: {
+      type: DataTypes.UUID,
+      primaryKey: true,
+      defaultValue: DataTypes.UUIDV4
+    },
     categoryId: DataTypes.INTEGER,
     sku: {
       type: DataTypes.STRING,
+      allowNull:false,
       validate: {
         notNull: {
           args: 'sku should be in request body'
@@ -30,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     name: {
       type: DataTypes.STRING,
+      allowNull:false,
       validate: {
         notNull: {
           args: 'name should be in request body'
@@ -41,6 +48,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     description: {
       type: DataTypes.TEXT,
+      allowNull:false,
       validate: {
         notNull: {
           args: 'description should be in request body'
@@ -52,6 +60,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     price: {
       type: DataTypes.REAL,
+      allowNull:false,
       validate: {
         is: {
           args: 0,
@@ -68,6 +77,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     stock: {
       type: DataTypes.INTEGER,
+      allowNull:false,
       validate: {
         is: {
           args: 0,

@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
   Address.init({
     id: {
       type: DataTypes.UUID,
+      primaryKey: true,
       defaultValue: DataTypes.UUIDV4,
     },
     userId: {
@@ -32,6 +33,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     address: {
       type: DataTypes.TEXT,
+      allowNull: false,
       validate: {
         notNull: {
           args: 'description should be in request body'
@@ -40,6 +42,11 @@ module.exports = (sequelize, DataTypes) => {
           msg: `description can't contain empty string`
         }
       }
+    },
+    isMain: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     }
   }, {
     sequelize,
