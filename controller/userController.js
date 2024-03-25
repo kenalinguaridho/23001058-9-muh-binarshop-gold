@@ -3,15 +3,16 @@ const
     { User } = require('../models'),
     { Op } = require("sequelize"),
     bcrypt = require('bcryptjs'),
-    jwt = require('jsonwebtoken');
-const { mailer } = require('../lib/mailer.js');
+    jwt = require('jsonwebtoken'),
+    { mailer } = require('../lib/mailer.js');
 
 require('dotenv').config()
 
 class UserController {
 
     static register = async (req, res) => {
-        let { name, username, email, phone, address, password, rePassword } = req.body
+
+        let { name, username, email, phone, password, rePassword } = req.body
 
         let statusCode = 201
 
@@ -20,42 +21,38 @@ class UserController {
         }
 
         try {
-            let data = {
+            const data = {
                 name: name ?? '',
                 username: username ?? '',
                 email: email ?? '',
                 phone: phone ?? '',
-                address: address ?? '',
                 password: password ?? ''
             }
 
-            let result = await User.create(data)
-            
-            mailer(result)
+            let user = await User.create(data)
 
-            return res.status(statusCode).json(responseJSON(data))
+            mailer(user)
+
+            return res.status(statusCode).json(responseJSON(user.dataValues))
 
 
         } catch (error) {
 
-            let status = 'failed'
+            let statusCode = 400
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
-            } else if (error.name === 'SequelizeValidationError') {
-                statusCode = 400
-            } else {
-                return res.status(500).json(responseJSON(null, status, 'Internal Server Error'))
             }
 
-            return res.status(statusCode).json(responseJSON(null, status, error.errors[0].message))
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message))
 
         }
 
     }
 
     static registerAdmin = async (req, res) => {
-        let { name, username, email, phone, address, password, rePassword } = req.body
+
+        let { name, username, email, phone, password, rePassword } = req.body
 
         let statusCode = 201
 
@@ -64,36 +61,31 @@ class UserController {
         }
 
         try {
-            let data = {
+            const data = {
                 name: name ?? '',
                 username: username ?? '',
                 email: email ?? '',
                 phone: phone ?? '',
-                address: address ?? '',
                 isAdmin: true,
                 password: password ?? ''
             }
 
-            await User.create(data)
+            const user = await User.create(data)
 
-            return res.status(statusCode).json(responseJSON(data))
+            mailer(user)
+
+            return res.status(statusCode).json(responseJSON(user.dataValues))
 
 
         } catch (error) {
 
-            let status = 'failed'
-
-            console.log(error)
+            let statusCode = 400
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
-            } else if (error.name === 'SequelizeValidationError') {
-                statusCode = 400
-            } else {
-                return res.status(500).json(responseJSON(null, status, 'Internal Server Error'))
             }
 
-            return res.status(statusCode).json(responseJSON(null, status, error.errors[0].message))
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? error.message))
 
         }
 
@@ -101,10 +93,6 @@ class UserController {
 
     static login = async (req, res) => {
         let { userLogin, password } = req.body
-
-        let statusCode = 200
-        let status
-        let message
 
         userLogin = userLogin.toLowerCase()
 
@@ -117,19 +105,15 @@ class UserController {
             })
 
             if (!user) {
-                message = `user not found`
-                statusCode = 404
-                throw error
+                return res.status(404).json(responseJSON(null, 'failed', 'user not found'))
             }
 
             const passwordCompared = bcrypt.compareSync(password, user.dataValues.password)
-            
+
             if (!passwordCompared) {
-                message = `password incorrect`
-                statusCode = 401
-                throw error
+                return res.status(404).json(responseJSON(null, 'failed', 'user not found'))
             }
-            
+
             const data = {
                 id: user.dataValues.id,
                 username: user.dataValues.username,
@@ -139,60 +123,49 @@ class UserController {
             let accessToken = jwt.sign(data, process.env.SECRET_KEY)
 
             data.accessToken = accessToken
-            
-            return res.status(statusCode).json(responseJSON(data, status))
+
+            return res.status(statusCode).json(responseJSON(data))
 
         } catch (error) {
 
-            status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, message))
+            return res.status(500).json(responseJSON(null, 'failed', error.message))
 
         }
 
     }
 
     static getUser = async (req, res) => {
-        
-        let users
-        let status = 'success'
-        let statusCode = 200
-        let message
 
         try {
-            users = await User.findByPk(req.user.id)
+
+            const user = await User.findByPk(req.user.id)
+
+            if (!user) throw error
+
+            return res.status(200).json(responseJSON(user))
+
         } catch (error) {
-            status = 'failed'
-            statusCode = 404
-            message = 'No user found'
+
+            return res.status(500).json(responseJSON(null, 'failed', error.message))
+
         }
 
-        return res.status(statusCode).json(responseJSON(users, status, message))
 
     }
 
     static editUser = async (req, res) => {
 
         let { name, username, email, phone, address, password, rePassword } = req.body
+
         let id = req.user.id
 
-        let statusCode = 200
-        let message
-
         if (rePassword != password) {
-            statusCode = 400
-            message = 'password is not consistent'
-            throw error
+            return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
         }
 
         try {
 
             let user = await User.findByPk(id)
-
-            if (!user) {
-                statusCode = 404
-                message = `user with id ${id} not found`
-                throw error
-            }
 
             const data = {
                 name: name ? name : user.dataValues.name,
@@ -207,15 +180,14 @@ class UserController {
                 where: {
                     id: id
                 },
-                individualHooks : true
+                individualHooks: true
             })
 
-            return res.status(statusCode).json(responseJSON(data))
+            return res.status(200).json(responseJSON(data))
 
         } catch (error) {
 
-            let status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, message || error.errors[0].message))
+            return res.status(400).json(responseJSON(null, 'failed', error.errors[0].message ?? 'no rows affected'))
 
         }
 
@@ -223,23 +195,55 @@ class UserController {
 
     static deleteUser = async (req, res) => {
 
-        let id = +req.user.id
+        let id = req.user.id
 
         try {
 
-            let user = await User.destroy({
+            const userDeleted = await User.destroy({
                 where: {
                     id: id
                 }
             })
 
-            if (!user) throw error
+            if (userDeleted = 0) {
+                return res.status(400).json(responseJSON(null, 'failed', `no user deleted`))
+            }
 
-            return res.status(200).json(responseJSON(null, 'success'))
+            return res.status(200).json(responseJSON(null))
 
         } catch (error) {
 
-            return res.status(404).json(responseJSON(null, 'failed', `user with id ${id} not found`))
+            return res.status(500).json(responseJSON(null, 'failed', error.message))
+
+        }
+
+    }
+
+    static verifyUser = async (req, res) => {
+
+        try {
+
+            const id = req.params.id
+
+            const user = await User.findByPk(id)
+
+            if (!user) {
+                return res.status(403).json(responseJSON(null, 'failed', 'no user verified'))
+            }
+
+            await User.update({
+                isActive: true
+            }, {
+                where: {
+                    id: id
+                }
+            })
+
+            return res.status(200).json(responseJSON(null))
+
+        } catch (error) {
+
+            return res.status(500).json(responseJSON(null, 'failed', error.message))
 
         }
 

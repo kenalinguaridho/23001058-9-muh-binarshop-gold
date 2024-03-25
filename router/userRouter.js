@@ -9,6 +9,7 @@ userRouter
     .post('/register', UserController.register)
     .post('/admin/register', UserController.registerAdmin)
     .post('/login', UserController.login)
+    .get('/verify/:id', UserController.verifyUser)
 
 userRouter.use(passport.initialize(), Auth.authentication, Auth.authorize)
 
