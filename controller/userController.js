@@ -227,7 +227,7 @@ class UserController {
 
             const user = await User.findByPk(id)
 
-            if (!user) {
+            if (!user || user.dataValues.isActive) {
                 return res.status(403).json(responseJSON(null, 'failed', 'no user verified'))
             }
 
