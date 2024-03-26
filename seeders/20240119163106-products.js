@@ -1,4 +1,7 @@
 'use strict';
+const {v4: uuid} = require('uuid')
+
+const { DataTypes } = require('sequelize');
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -15,6 +18,7 @@ module.exports = {
 
     await queryInterface.bulkInsert('Products', [
       {
+        id: uuid(),
         sku: 'FS-0001',
         categoryId: 1,
         name: 'Kemeja Flanel',
@@ -23,6 +27,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         sku: 'FS-0002',
         categoryId: 1,
         name: 'Kemeja Polos',
@@ -31,6 +36,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         sku: 'FS-0003',
         categoryId: 1,
         name: 'Kaos Band',
@@ -39,6 +45,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 1,
         name: 'Celana Cargo Panjang',
         sku: 'FS-0004',
@@ -47,6 +54,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 1,
         name: 'Celana Cargo Pendek',
         sku: 'FS-0005',
@@ -55,6 +63,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 1,
         name: 'Kolor Bola',
         sku: 'FS-0006',
@@ -63,6 +72,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 2,
         name: 'Sepatu Sekolah Tanpa Merek',
         sku: 'SAS-0001',
@@ -71,6 +81,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 2,
         name: 'Sepatu Olahraga',
         sku: 'SAS-0002',
@@ -79,6 +90,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 2,
         name: 'Sepatu Futsal Bagus',
         sku: 'SAS-0003',
@@ -87,6 +99,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 2,
         name: 'Sepatu Pantofel Pria',
         sku: 'SAS-0004',
@@ -95,6 +108,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 2,
         name: 'Sepatu Pantofel Wanita',
         sku: 'SAS-0005',
@@ -103,6 +117,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 2,
         name: 'Sandal Jepit Swallow',
         sku: 'SAS-0006',
@@ -111,6 +126,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 3,
         name: 'TV LED 29 inch',
         sku: 'ELT-0001',
@@ -119,6 +135,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 3,
         name: 'Set Top Box',
         sku: 'ELT-0002',
@@ -127,6 +144,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 3,
         name: 'Microwave',
         sku: 'ELT-0003',
@@ -135,6 +153,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 3,
         name: 'Air Fryer',
         sku: 'ELT-0004',
@@ -143,6 +162,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 3,
         name: 'Oven Listrik',
         sku: 'ELT-0005',
@@ -151,6 +171,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 3,
         name: 'Blender',
         sku: 'ELT-0006',
@@ -159,6 +180,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 4,
         name: 'Gelang Power Balance',
         sku: 'ACC-0001',
@@ -167,6 +189,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 4,
         name: 'Cincin Warna Emas',
         sku: 'ACC-0002',
@@ -175,6 +198,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 4,
         name: 'Kalung Warna Emas',
         sku: 'ACC-0003',
@@ -183,6 +207,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 4,
         name: 'Gelang Warna Emas',
         sku: 'ACC-0004',
@@ -191,6 +216,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 4,
         name: 'Bros Motif Bunga',
         sku: 'ACC-0005',
@@ -199,6 +225,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 4,
         name: 'Kacamata',
         sku: 'ACC-0006',
@@ -207,6 +234,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 5,
         name: 'Mobil RC Offroad',
         sku: 'MAH-0001',
@@ -215,6 +243,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 5,
         name: 'MobilRC Drift',
         sku: 'MAH-0002',
@@ -223,6 +252,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 5,
         name: 'Set Mainan Rumah-Rumahan',
         sku: 'MAH-0003',
@@ -231,6 +261,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 5,
         name: 'Mainan Bongkar Pasang',
         sku: 'MAH-0004',
@@ -239,6 +270,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 5,
         name: 'Boneka Barbie',
         sku: 'MAH-0005',
@@ -247,6 +279,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 6,
         name: 'Panci Stainless',
         sku: 'KTC-0001',
@@ -255,6 +288,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 6,
         name: 'Wajan Stainless',
         sku: 'KTC-0002',
@@ -263,6 +297,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 6,
         name: 'Spatula Stainless',
         sku: 'KTC-0003',
@@ -271,6 +306,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 6,
         name: 'Capitan Stainless',
         sku: 'KTC-0004',
@@ -279,6 +315,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 6,
         name: 'Saringan stainless',
         sku: 'KTC-0005',
@@ -287,6 +324,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 6,
         name: 'Wadah Minyak Stainless',
         sku: 'KTC-0006',
@@ -295,6 +333,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 7,
         name: 'Gergaji',
         sku: 'CPT-0001',
@@ -303,6 +342,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 7,
         name: 'Tang Buaya',
         sku: 'CPT-0002',
@@ -311,6 +351,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 7,
         name: 'Palu',
         sku: 'CPT-0003',
@@ -319,6 +360,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 7,
         name: 'Obeng Plus',
         sku: 'CPT-0004',
@@ -327,6 +369,7 @@ module.exports = {
         stock : 25
       },
       {
+        id: uuid(),
         categoryId: 7,
         name: 'Obeng Min',
         sku: 'CPT-0005',
@@ -334,8 +377,7 @@ module.exports = {
         price : 55_000.00,
         stock : 25
       }
-    ],
-      {});
+    ]);
   },
 
   async down(queryInterface, Sequelize) {
