@@ -22,11 +22,11 @@ class UserController {
 
         try {
             const data = {
-                name: name ?? '',
-                username: username ?? '',
-                email: email ?? '',
-                phone: phone ?? '',
-                password: password ?? ''
+                name: name,
+                username: username,
+                email: email,
+                phone: phone,
+                password: password
             }
 
             let user = await User.create(data)
@@ -62,12 +62,12 @@ class UserController {
 
         try {
             const data = {
-                name: name ?? '',
-                username: username ?? '',
-                email: email ?? '',
-                phone: phone ?? '',
+                name: name,
+                username: username,
+                email: email,
+                phone: phone,
                 isAdmin: true,
-                password: password ?? ''
+                password: password
             }
 
             const user = await User.create(data)
@@ -85,30 +85,40 @@ class UserController {
                 statusCode = 409
             }
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? error.message))
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message))
 
         }
 
     }
 
     static login = async (req, res) => {
+
         let { userLogin, password } = req.body
 
-        userLogin = userLogin.toLowerCase()
-
         try {
+            
+            const payload = {
+                userLogin: userLogin ?? '',
+                password: password ?? ''
+            }
 
+            payload.userLogin = payload.userLogin.toLowerCase()
+            
             let user = await User.findOne({
                 where: {
-                    [Op.or]: [{ username: userLogin }, { email: userLogin }]
+                    [Op.or]: [{ username: payload.userLogin }, { email: payload.userLogin }]
                 }
             })
+
+            if (!user.isActive) {
+                return res.status(403).json(responseJSON(null, 'failed', 'user is inactive'))
+            }
 
             if (!user) {
                 return res.status(404).json(responseJSON(null, 'failed', 'user not found'))
             }
 
-            const passwordCompared = bcrypt.compareSync(password, user.dataValues.password)
+            const passwordCompared = bcrypt.compareSync(payload.password, user.dataValues.password)
 
             if (!passwordCompared) {
                 return res.status(404).json(responseJSON(null, 'failed', 'user not found'))
@@ -124,7 +134,7 @@ class UserController {
 
             data.accessToken = accessToken
 
-            return res.status(statusCode).json(responseJSON(data))
+            return res.status(200).json(responseJSON(data))
 
         } catch (error) {
 
