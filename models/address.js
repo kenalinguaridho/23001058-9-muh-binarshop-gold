@@ -36,10 +36,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         notNull: {
-          args: 'description should be in request body'
+          msg: 'address should be in request body'
         },
         notEmpty: {
-          msg: `description can't contain empty string`
+          msg: `address can't contain empty string`
         }
       }
     },

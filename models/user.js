@@ -35,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         notNull: {
-          args: 'name should be in request body'
+          msg: 'name should be in request body'
         },
         notEmpty: {
           msg: `name can't contain empty string`
