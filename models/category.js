@@ -24,6 +24,10 @@ module.exports = (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING,
       validate: {
+        is: {
+          args: /^[a-zA-Z\s]*$/,
+          msg: 'category name must be a string'
+        },
         notEmpty: {
           msg: `category name can't contain empty string`
         }

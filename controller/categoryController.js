@@ -4,8 +4,6 @@ const { Category, Product } = require('../models')
 class CategoryController {
     static getAllCategories = async (_, res) => {
 
-        let statusCode = 200
-
         try {
 
             const categories = await Category.findAll(
@@ -13,60 +11,43 @@ class CategoryController {
                     attributes: ['id', 'name'],
                 })
 
-            if (!categories) {
-                statusCode = 404
-                throw error
-            }
-
-            return res.status(statusCode).json(responseJSON(categories))
+            return res.status(200).json(responseJSON(categories))
 
         } catch (error) {
 
-            let status = 'failed'
-            let message = 'No category found'
+            return res.status(500).json(responseJSON(null, 'failed', 'error while fetching data'))
 
-            return res.status(statusCode).json(responseJSON(null, status, message))
         }
-
 
     }
 
     static getCategoryById = async (req, res) => {
 
-        let id = +req.params.id
-        let statusCode = 200
-        let status
-        let message
-        let category
-
         try {
-
-            category = await Category.findByPk(
+        
+            let id = +req.params.id
+            
+            const category = await Category.findByPk(
                 id,
                 {
                     attributes: ['name'],
                     include: [{
                         model: Product,
                         as: 'products',
-                        attributes: {
-                            exclude: ['categoryId', 'sku', 'stock', 'createdAt', 'updatedAt', 'deletedAt']
-                        }
+                        attributes: ['id', 'name', 'price', 'stock']
                     }],
 
                 })
 
             if (!category) {
-                statusCode = 404
-                message = `Category with id ${id} not found`
-                throw error
+                return res.status(404).json(responseJSON(null, 'failed', `no category with id ${id}`))
             }
 
-            return res.status(statusCode).json(responseJSON(category))
+            return res.status(200).json(responseJSON(category))
 
         } catch (error) {
 
-            status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, message))
+            return res.status(500).json(responseJSON(null, 'failed', 'error while fetching data'))
 
         }
 
@@ -75,24 +56,25 @@ class CategoryController {
 
     static createNewCategory = async (req, res) => {
 
-        let statusCode = 200
-        let status
-
         try {
 
-            const data = {
-                name: req.body.name ?? ''
+            const payload = {
+                name: req.body.name
             }
 
-            await Category.create(data)
+            const category = await Category.create(payload)
 
-            return res.status(statusCode).json(responseJSON(data))
+            return res.status(201).json(responseJSON(category))
 
         } catch (error) {
 
-            status = 'failed'
-            statusCode = 400
-            return res.status(statusCode).json(responseJSON(null, status, error.errors[0].message ?? error))
+            let statusCode = 500
+
+            if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            }
+
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while creating new category'))
 
         }
 
@@ -100,39 +82,39 @@ class CategoryController {
 
     static updateCategory = async (req, res) => {
 
-        let id = req.params.id
-        let statusCode = 200
-        let message
-
-
         try {
+        
+            let id = req.params.id
 
-            let category = await Category.findByPk(id)
+            const category = await Category.findByPk(id)
 
-            if (!category) {
-                message = `No category with id ${id}`
-                statusCode = 404
-                throw error
+            if(!category) {
+                return res.status(404).json(responseJSON(null, 'failed', `no category with id ${id}`))
             }
-
-            const newData = {
+            
+            const payload = {
                 name: req.body.name ?? category.dataValues.name
             }
 
-            await Category.update(
-                newData,
+            await category.update(
+                payload,
                 {
                     where: {
                         id: id
                     }
                 })
 
-            return res.status(statusCode).json(responseJSON(newData))
+            return res.status(200).json(responseJSON(category))
 
         } catch (error) {
 
-            let status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, message))
+            let statusCode = 500
+
+            if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            }
+
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating category'))
 
         }
 
@@ -141,22 +123,14 @@ class CategoryController {
 
     static deleteCategory = async (req, res) => {
 
-        let id = +req.params.id
-        let statusCode = 200
-        let message
-
         try {
 
-            let category = await Category.findOne({
-                where: {
-                    id: id
-                }
-            })
+            const id = +req.params.id
 
-            if (!category) {
-                message = `No category with id ${id}`
-                statusCode = 404
-                throw error
+            const category = await Category.findByPk(id)
+
+            if(!category) {
+                return res.status(404).json(responseJSON(null, 'failed', `no category with id ${id}`))
             }
 
             await Category.destroy({
@@ -165,12 +139,11 @@ class CategoryController {
                 }
             })
 
-            return res.status(statusCode).json(responseJSON(null))
+            return res.status(200).json(responseJSON(null))
 
         } catch (error) {
 
-            let status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, message))
+            return res.status(500).json(responseJSON(null, 'failed', 'error while deleting category'))
 
         }
 
