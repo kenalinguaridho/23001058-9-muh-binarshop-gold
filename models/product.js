@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Product.belongsTo(models.Category, {
         as: 'category',
-        foreignKey: "id",
-        sourceKey: "categoryId"
+        foreignKey: "categoryId",
+        sourceKey: "id"
       })
     }
   }
@@ -25,12 +25,15 @@ module.exports = (sequelize, DataTypes) => {
     sku: {
       type: DataTypes.STRING,
       allowNull:false,
+      unique: {
+        msg: 'sku is already used'
+      },
       validate: {
         notNull: {
           args: 'sku should be in request body'
         },
         notEmpty: {
-          msg: `category name can't contain empty string`
+          msg: `sku can't contain empty string`
         }
       }
     },
@@ -62,12 +65,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.REAL,
       allowNull:false,
       validate: {
-        is: {
-          args: 0,
+        min: {
+          args: 1,
           msg: `price can't be 0`
         },
         notNull: {
-          args: 'price should be in request body'
+          msg: 'price should be in request body'
         },
         isNumeric: {
           args: true,
@@ -79,12 +82,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull:false,
       validate: {
-        is: {
-          args: 0,
-          msg: `price can't be 0`
+        min: {
+          args: 1,
+          msg: `stock can't be 0`
         },
         notNull: {
-          args: 'price should be in request body'
+          args: 'stock should be in request body'
         },
         isInt: {
           args: true,
