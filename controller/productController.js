@@ -7,244 +7,206 @@ class ProductController {
 
     static getAllProducts = async (_, res) => {
 
-        let statusCode = 200
-        let status
-        let message
-        let products
-
         try {
 
-            products = await Product.findAll({
-                attributes: ['id', 'categoryId', 'sku', 'name', 'description', 'price', 'stock']
+            const products = await Product.findAll({
+                attributes: ['id', 'categoryId', 'name', 'price', 'stock']
             })
 
-            if (products.length === 0) {
-                throw error
-            }
+            return res.status(200).json(responseJSON(products))
 
         } catch (error) {
 
-            statusCode = 404
-            status = 'failed'
-            message = 'No product found'
+            return res.status(statusCode).json(responseJSON(null, 'failed', 'error while fetching data'))
 
         }
-
-        return res.status(statusCode).json(responseJSON(products, status, message))
 
     }
 
     static getProductById = async (req, res) => {
 
-        const id = +req.params.id
-        let statusCode = 200
-        let status = 'success'
-        let message
-
-        let product = {}
-
         try {
 
-            product = await Product.findOne({
+            const id = req.params.id
+
+            const product = await Product.findOne({
                 where: {
                     id: id
                 },
                 attributes: ['sku', 'name', 'description', 'price', 'stock'],
                 include: {
                     model: Category,
-                    as:'category',
+                    as: 'category',
                     attributes: ['id', 'name']
                 }
 
             })
 
             if (!product) {
-                statusCode = 404
-                message = `No product with id ${id}`
-                throw error
+                return res.status(404).json(responseJSON(null, 'failed', `no product with id ${id}`))
             }
+
+            return res.status(200).json(responseJSON(product))
 
         } catch (error) {
 
-            status = 'failed'
-            product = null
             console.log(error)
+            return res.status(500).json(responseJSON(null, 'failed', 'error while fetching data'))
 
         }
 
-        return res.status(statusCode).json(responseJSON(product, status, message))
 
     }
 
     static createNewProduct = async (req, res) => {
 
-        let { sku, categoryId, name, description, price, stock } = req.body
-        let statusCode = 201
-        let status = 'success'
-        let messages = {}
-
-        if (sku == undefined) sku = ""
-        if (categoryId == undefined) categoryId = ""
-        if (name == undefined) name = ""
-        if (description == undefined) description = ""
-        if (price == undefined) price = ""
-        if (stock == undefined) stock = ""
-
-        if (sku === "") messages.sku = "sku cannot be empty"
-        if (categoryId === "") messages.categoryId = "categoryId cannot be empty"
-        if (name === "") messages.name = "name cannot be empty"
-        if (description === "") messages.description = "description cannot be empty"
-        if (price === "") messages.price = "price cannot be empty"
-        if (stock === "") messages.stock = "stock cannot be empty"
-
-        if (Object.keys(messages).length != 0) {
-            status = 'failed'
-            return res.status(400).json(responseJSON(null, status, messages))
-        }
-
-        let data = {
-            sku: sku,
-            categoryId: categoryId,
-            name: name,
-            description: description,
-            price: price,
-            stock: stock
-        }
-
         try {
 
-            let category = await Category.findOne({
-                where : {
-                    id : categoryId
-                }
-            })
+            const { sku, categoryId, name, description, price, stock } = req.body
 
-            if (category == null) {
-                statusCode = 404
-                messages.category = `Category with id ${categoryId} not found`
-                throw error
+            const payload = {
+                sku: sku,
+                categoryId: categoryId,
+                name: name,
+                description: description,
+                price: price,
+                stock: stock
             }
 
-            let skuDuplicated = await Product.findOne({
+            const category = await Category.findOne({
                 where: {
-                    sku: data.sku
+                    id: categoryId
                 }
             })
 
-            if (skuDuplicated != null) {
-                statusCode = 409
-                messages.sku = 'sku is already used'
-                throw error
+            if (!category) {
+                return res.status(404).json(responseJSON(null, 'failed', `no category with id ${payload.categoryId}`))
             }
 
-            Product.create(data)
+            const product = await Product.create(payload)
+
+            return res.status(201).json(responseJSON(product))
 
         } catch (error) {
 
-            status = 'failed'
-            data = null
+            let statusCode = 500
+
+            if (error.name === 'SequelizeUniqueConstraintError') {
+                statusCode = 409
+            } else if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            }
+
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while creating new product'))
 
         }
 
-        return res.status(statusCode).json(responseJSON(data, status, messages))
 
     }
 
     static editProduct = async (req, res) => {
 
-        let id = +req.params.id
-        let { sku, categoryId, name, description, price, stock } = req.body
-        let statusCode = 200
-        let status
-        let messages
-
-        if (sku == undefined) sku = ""
-        if (categoryId == undefined) categoryId = ""
-        if (name == undefined) name = ""
-        if (description == undefined) description = ""
-        if (price == undefined) price = ""
-        if (stock == undefined) stock = ""
-
         try {
 
-            let product = await Product.findOne({
+            const id = req.params.id
+
+            const { name, description, price } = req.body
+
+            const product = await Product.findOne({
                 where: {
                     id: id
                 }
             })
 
             if (!product) {
-                statusCode = 404
-                throw error
+                return res.status(404).jsn(responseJSON(null, 'failed', `no product with id ${id}`))
             }
 
-            let [skuDuplicated] = await Promise.allSettled([
-                Product.findOne({
-                    where: {
-                        sku: sku,
-                        id: {
-                            [Op.ne]: +req.params.id
-                        }
-                    }
-                })
-            ])
-
-            if (skuDuplicated.value != null) {
-                statusCode = 409
-                messages = 'sku is already used'
-                throw error
-            }
-
-            let data = {
-                sku: sku ? sku : product.dataValues.sku,
-                categoryId: categoryId ? categoryId : product.dataValues.categoryId,
+            const payload = {
                 name: name ? name : product.dataValues.name,
                 description: description ? description : product.dataValues.description,
                 price: price ? price : product.dataValues.price,
-                stock: stock ? stock : product.dataValues.stock
             }
 
-            await Product.update(data, {
+            await Product.update(payload, {
                 where: {
                     id: id
                 }
             })
 
+            return res.status(200).json(responseJSON(null))
 
         } catch (error) {
 
-            status = 'failed'
-            return res.status(statusCode).json(responseJSON(null, status, messages))
+            let statusCode = 500
+
+            if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            }
+
+            return res.status(500).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
 
         }
 
-        return res.status(statusCode).json(responseJSON(null))
 
     }
 
     static deleteProduct = async (req, res) => {
 
-        let id = +req.params.id
-        let status
-        let statusCode = 200
-        let message
-
         try {
-            await Product.destroy({
+
+            const id = req.params.id
+
+            const productDeleted = await Product.destroy({
                 where: {
                     id: id
                 }
             })
+
+            if (productDeleted == 0) {
+                return res.status(400).json(responseJSON(null, 'failed', 'no product was deleted'))
+            }
+
+            return res.status(200).json(responseJSON(null))
+
         } catch (error) {
-            status = 'failed'
-            message = `Product with id ${id} not found`
+
+            return res.status(500).json(responseJSON(null, 'failed', 'error while deleting product'))
+
         }
 
-        return res.status(statusCode).json(responseJSON(null, status, message))
 
     }
+
+    static restock = async (req, res) => {
+        try {
+
+            const newStock = req.body.stock
+
+            const product = await Product.findByPk(req.params.id)
+
+            if (!product) {
+                return res.status(404).json(responseJSON(null, 'failed', `no product with id ${id}`))
+            }
+
+            await product.update({
+                stock: newStock + product.dataValues.stock
+            })
+
+            return res.status(200).json(responseJSON(null))
+
+        } catch (error) {
+
+            let statusCode = 500
+
+            if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            }
+
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'failed while updating product stock'))
+
+        }
+    }
 }
-
-
 
 module.exports = { ProductController }

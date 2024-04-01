@@ -84,14 +84,17 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         min: {
           args: 1,
-          msg: `stock can't be 0`
+          msg: `stock can't be less than 1`
         },
         notNull: {
           args: 'stock should be in request body'
         },
-        isInt: {
+        isNumeric: {
           args: true,
-          msg: 'please input valid number'
+          msg: 'stock is only allow numbers'
+        },
+        isInt: {
+          msg: 'stock is only allow integer number'
         },
       }
     }
