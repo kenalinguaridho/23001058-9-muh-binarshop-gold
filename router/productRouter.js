@@ -14,5 +14,6 @@ productRouter
     .post('/', ProductController.createNewProduct)
     .put('/:id', ProductController.editProduct)
     .delete('/:id', ProductController.deleteProduct)
+    .patch('/:id', ProductController.restock)
 
 module.exports = productRouter
