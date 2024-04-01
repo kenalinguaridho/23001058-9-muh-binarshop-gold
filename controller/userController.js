@@ -10,7 +10,7 @@ require('dotenv').config()
 
 class UserController {
 
-    static register = async (req, res) => {
+    static registerUser = async (req, res) => {
 
         let { name, username, email, phone, password, rePassword } = req.body
 
@@ -38,13 +38,15 @@ class UserController {
 
         } catch (error) {
 
-            let statusCode = 400
+            let statusCode = 500
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
+            } else if(error.name === 'SequelizeValidationError') {
+                statusCode = 400
             }
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message))
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while creating new user'))
 
         }
 
@@ -79,13 +81,15 @@ class UserController {
 
         } catch (error) {
 
-            let statusCode = 400
+            let statusCode = 500
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
+            } else if(error.name === 'SequelizeValidationError') {
+                statusCode = 400
             }
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message))
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while creating new user'))
 
         }
 
@@ -127,7 +131,8 @@ class UserController {
             const data = {
                 id: user.dataValues.id,
                 username: user.dataValues.username,
-                isAdmin: user.dataValues.isAdmin
+                isAdmin: user.dataValues.isAdmin,
+                isActive: user.dataValues.isActive
             }
 
             let accessToken = jwt.sign(data, process.env.SECRET_KEY)
@@ -175,29 +180,35 @@ class UserController {
 
         try {
 
-            let user = await User.findByPk(id)
+            const user = await User.findByPk(id)
 
-            const data = {
-                name: name ? name : user.dataValues.name,
-                username: username ? username : user.dataValues.username,
-                email: email ? email : user.dataValues.email,
-                phone: phone ? phone : user.dataValues.phone,
-                address: address ? address : user.dataValues.address,
-                password: password ? password : user.dataValues.password
+            const payload = {
+                name: name ?? user.dataValues.name,
+                username: username ?? user.dataValues.username,
+                email: email ?? user.dataValues.email,
+                phone: phone ?? user.dataValues.phone,
+                address: address ?? user.dataValues.address,
+                password: password ?? user.dataValues.password
             }
 
-            await User.update(data, {
+            await user.update(payload, {
                 where: {
-                    id: id
+                    id
                 },
                 individualHooks: true
             })
 
-            return res.status(200).json(responseJSON(data))
+            return res.status(200).json(responseJSON(user))
 
         } catch (error) {
 
-            return res.status(400).json(responseJSON(null, 'failed', error.errors[0].message ?? 'no rows affected'))
+            let statusCode = 500
+
+            if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            }
+
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
 
         }
 
@@ -216,7 +227,7 @@ class UserController {
             })
 
             if (userDeleted = 0) {
-                return res.status(400).json(responseJSON(null, 'failed', `no user deleted`))
+                return res.status(400).json(responseJSON(null, 'failed', `failed while deleting account`))
             }
 
             return res.status(200).json(responseJSON(null))
