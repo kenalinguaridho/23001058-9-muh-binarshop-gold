@@ -50,7 +50,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         notNull: {
-          args: 'username should be in request body'
+          msg: 'username should be in request body'
         },
         notContains: {
           args: ' ',
@@ -69,7 +69,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       validate: {
         notNull: {
-          args: 'email should be in request body'
+          msg: 'email should be in request body'
         },
         isEmail: {
           msg: `email field must contain valid email`
@@ -91,7 +91,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       validate: {
         notNull: {
-          args: 'phone number should be in request body'
+          msg: 'phone number should be in request body'
         },
         notContains: {
           args: ' ',
@@ -113,7 +113,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         notNull: {
-          args: 'password should be in request body'
+          msg: 'password should be in request body'
         },
         notEmpty: {
           msg: `password can't contain empty string`
@@ -133,8 +133,8 @@ module.exports = (sequelize, DataTypes) => {
     user.email = user.email.toLowerCase()
   })
 
-  User.beforeUpdate(async (user) => {
-    const hashedPassword = await hashSync(user.password, 10)
+  User.beforeUpdate(user => {
+    const hashedPassword = hashSync(user.password, 10)
     user.password = hashedPassword
     user.username = user.username.toLowerCase()
     user.email = user.email.toLowerCase()
