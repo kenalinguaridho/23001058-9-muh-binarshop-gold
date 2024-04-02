@@ -6,8 +6,7 @@ const
     categoryRouter = require('./categoryRouter'),
     productRouter = require('./productRouter'),
     paymentRouter = require('./paymentRouter'),
-    orderRouter = require('./orderRouter'),
-    orderProductRouter = require('./orderProductRouter')
+    orderRouter = require('./orderRouter')
 
 // ================ Router Collection ================
 
