@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
 
       Order.belongsTo(models.PaymentMethod, {
         targetKey: 'id',
-        foreignKey: 'paymentMethodId'
+        foreignKey: 'paymentId'
       })
 
       Order.belongsTo(models.Address, {
@@ -39,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       defaultValue: DataTypes.UUIDV4
     },
-    userId: DataTypes.INTEGER,
+    userId: DataTypes.UUID,
     paymentId: {
       type: DataTypes.INTEGER,
       validate: {
