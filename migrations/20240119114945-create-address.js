@@ -19,6 +19,18 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: false
       },
+      note: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
+      receiver: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      phone: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
       isMain: {
         type: Sequelize.BOOLEAN,
         allowNull: false

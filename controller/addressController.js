@@ -8,7 +8,8 @@ class AddressController {
             const addresses = await Address.findAll({
                 where: {
                     userId: req.user.id
-                }
+                },
+                attributes: ['id', 'address', 'receiver', 'phone', 'note', 'isMain']
             })
 
             return res.status(200).json(responseJSON(addresses))
@@ -28,7 +29,8 @@ class AddressController {
             const address = await Address.findOne({
                 where: {
                     [Op.and]: [{ id: id }, { userId: req.user.id }]
-                }
+                },
+                attributes: ['id', 'address', 'receiver', 'phone', 'note', 'isMain']
             })
 
             if (!address) {
@@ -47,10 +49,14 @@ class AddressController {
     static createNewAddress = async (req, res) => {
         try {
 
+            const { address, receiver, phone, note } = req.body
+
             const payload = {
                 userId: req.user.id,
-                address: req.body.address,
-                // isMain: false
+                address: address,
+                receiver: receiver,
+                phone: phone,
+                note: note
             }
 
             const addresses = await Address.findAll({
@@ -64,9 +70,9 @@ class AddressController {
                 payload.isMain = true
             }
 
-            const address = await Address.create(payload)
+            const addressCreated = await Address.create(payload)
 
-            return res.status(201).json(responseJSON(address))
+            return res.status(201).json(responseJSON(addressCreated))
 
         } catch (error) {
 
@@ -87,27 +93,28 @@ class AddressController {
 
             const id = req.params.id
 
-            const payload = {
-                address: req.body.address
-            }
+            const { address, note, receiver, phone} = req.body
 
-            let address = await Address.update(payload, {
-                where: {
-                    [Op.and]: [{ id: id }, { userId: req.user.id }]
-                }
-            })
-
-            if (address[0] === 0) {
-                return res.status(404).json(responseJSON(null, 'failed', 'no address updated'))
-            }
-
-            address = await Address.findOne({
+            const addressUpdate = await Address.findOne({
                 where: {
                     [Op.and]: [{ userId: req.user.id }, { id: id }]
                 }
             })
 
-            return res.status(200).json(responseJSON(address))
+            if (!addressUpdate) {
+                return res.status(404).json(responseJSON(null, 'failed', 'no address found'))
+            }
+
+            const payload = {
+                address: address ?? addressUpdate.dataValues.address,
+                note: note ?? addressUpdate.dataValues.note,
+                receiver: receiver ?? addressUpdate.dataValues.receiver,
+                phone: phone ?? addressUpdate.dataValues.phone
+            }
+
+            await addressUpdate.update(payload)
+
+            return res.status(200).json(responseJSON(addressUpdate))
 
         } catch (error) {
 
@@ -182,8 +189,6 @@ class AddressController {
             if (address === 0) {
                 return res.status(404).json(responseJSON(null, 'failed', 'no address deleted'))
             }
-
-            console.log("ADDRESS ==> ", address);
 
             return res.status(200).json(responseJSON(null))
 

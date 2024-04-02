@@ -39,7 +39,39 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'address should be in request body'
         },
         notEmpty: {
-          msg: `address can't contain empty string`
+          msg: `address can't be empty string`
+        }
+      }
+    },
+    note: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    receiver: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: 'receiver name should be in request body'
+        },
+        notEmpty: {
+          msg: `receiver name can't be empty string`
+        }
+      }
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: 'phone number should be in request body'
+        },
+        notContains: {
+          args: ' ',
+          msg: `phone number can't contain spaces`
+        },
+        notEmpty: {
+          msg: `phone number can't be empty string`
         }
       }
     },
