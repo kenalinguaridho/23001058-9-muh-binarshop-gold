@@ -1,152 +1,259 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { Order, User, PaymentMethod } = require('../models')
+    { Op, DATE } = require("sequelize"),
+    { Order, OrderProduct, Address, PaymentMethod, Product, sequelize } = require('../models'),
+    cron = require('node-cron');
 
 class OrderController {
 
-    static getAllOrders = async (_, res) => {
-
-        let orders
-        let status
-        let statusCode = 200
-        let message
+    // Get All User's Order
+    static getAllOrders = async (req, res) => {
 
         try {
-            orders = await Order.findAll({})
 
-            if (!orders.value) {
-                throw error
-            }
+            const orders = await Order.findAll({
+                where: {
+                    userId: req.user.id
+                }
+            })
+
+            return res.status(200).json(responseJSON(orders))
 
         } catch (error) {
-            status = 'failed'
-            message = 'No orders found'
-            statusCode = 404
+
+            return res.status(500).json(responseJSON(null, 'failed', 'failed to fetch data'))
+
         }
-        res.status(statusCode).json(responseJSON(orders, status, message))
+
     }
 
+    // Get Order Details for User as Customer
+    static getOrderById = async (req, res) => {
+
+        try {
+
+            const id = req.params.id
+
+            // Find One Order And Assign Attributes Needed
+            const order = await Order.findOne({
+                where: {
+                    [Op.and]: [{ id: id }, { userId: req.user.id }]
+                },
+                attributes: ['id', 'status', 'totalPrice'],
+                include: [{
+                    model: OrderProduct,
+                    as: 'orderProducts',
+                    attributes: ['productId', 'amount', 'subTotal']
+                },
+                {
+                    model: Address,
+                    as: 'address',
+                    attributes: ['address', 'note', 'receiver', 'phone']
+                },
+                {
+                    model: PaymentMethod,
+                    as: 'paymentMethod',
+                    attributes: ['name']
+                }],
+            })
+
+            // If no order found It return error
+            if (!order) {
+                return res.status(404).json(responseJSON(null, 'failed', `you have no order with id ${id}`))
+            }
+
+            // If order found it return order details
+            return res.status(200).json(responseJSON(order))
+
+        } catch (error) {
+
+            return res.status(500).json(responseJSON(null, 'failed', 'failed to fetch data'))
+
+        }
+
+    }
+
+    // Create New Order
     static createNewOrder = async (req, res) => {
 
-        let { userId, paymentId, address } = req.body
-        let status = 'success'
-        let statusCode = 201
-        let messages = {}
-        let data = {}
-
-        if (userId == null) messages.user = 'UserId tidak boleh kosong'
-        if (paymentId == null) messages.payment = 'PaymentId tidak boleh kosong'
-
-        if (Object.keys(messages).length != 0) {
-            status = 'failed'
-            statusCode = 400
-            return res.status(statusCode).json(responseJSON(null, status, messages))
-        }
+        // Transaction begin
+        const t = await sequelize.transaction()
 
         try {
 
-            let [userFound, paymentFound] = await Promise.allSettled([
+            // Define variable by request body
+            let { paymentId, products } = req.body
 
-                User.findOne({
-                    where: {
-                        id: userId
-                    }
-                }),
-                PaymentMethod.findOne({
-                    where: {
-                        id: paymentId
-                    }
-                })
+            // Early variable declaration
+            let productArray = []
+            let product
+            let total_price = 0
 
-            ])
+            // Order will be expired 2 hours after order created
+            const expired = new Date(new Date().setHours(new Date().getHours() + 2))
 
-            if (!userFound.value) {
-                messages.user = `User with id ${userId} not found`
+            // Find User's active address to deliver the order
+            const activeAddress = await Address.findOne({
+                where: {
+                    [Op.and]: [{ userId: req.user.id }, { isMain: true }]
+                }
+            })
+
+            // Find payment method that user want to use
+            const payment = await PaymentMethod.findByPk(paymentId)
+
+            // Check if the payment method is available
+            if (!payment) {
+                return res.status(404).json(responseJSON(null, 'failed', `no payment method with id ${paymentId}`))
             }
 
-            if (!paymentFound.value) {
-                messages.payment = `Payment Method with id ${paymentId} not found`
-            }
-
-            if (Object.keys(messages).length != 0) {
-                throw error
-            }
-
-            data = {
-                userId: userId,
+            // Define data to insert on order table
+            let orderPayload = {
+                userId: req.user.id,
                 paymentId: paymentId,
-                status: "waiting for order",
-                address: address ? address : userFound.value.address,
-                totalPrice: null
+                status: 'waiting for payment',
+                expiresOn: expired,
+                addressId: activeAddress.dataValues.id,
+                totalPrice: 0
             }
 
-            await Order.create(data)
+            // Insert order data to db
+            const order = await Order.create(orderPayload, { transaction: t })
+
+            // Loop to check every product to order
+            for (let i = 0; i < products.length; i++) {
+
+                // Find the product that user want to order
+                product = await Product.findByPk(products[i].id)
+
+                // Check if the product is exist
+                if (!product) {
+                    return res.status(404).json(responseJSON(null, 'failed', `no product with id ${products[i].id}`))
+                }
+
+                // Check product stock before order
+                if (product.dataValues.stock < products[i].amount) {
+                    return res.status(400).json(responseJSON(null, 'failed', `product with id ${products[i].id} is out of amount`))
+                }
+
+                // Count the sub total of the order => amount of product * product price
+                let sub_total = products[i].amount * product.dataValues.price
+                total_price += sub_total
+
+                // Create payload for orderProduct for each product inserted
+                let orderProductPayload = {
+                    orderId: order.dataValues.id,
+                    productId: products[i].id,
+                    amount: products[i].amount,
+                    subTotal: sub_total
+                }
+
+                // Decrease product stock after create order
+                await product.increment({ 'stock': -products[i].amount }, { transaction: t })
+
+                // Store all payload into an array to bulk insert
+                productArray.push(orderProductPayload)
+
+            }
+
+            // Bulk insert into OrderProduct table
+            await OrderProduct.bulkCreate(productArray, { transaction: t })
+
+            // Update totalPrice in Order table
+            await order.increment({ 'totalPrice': total_price }, { transaction: t })
+
+            // Commit all the changes to database after complete all step
+            await t.commit()
+
+            return res.status(201).json(responseJSON(productArray))
 
         } catch (error) {
-            status = 'failed'
-            statusCode = 404
-            data = null
-            console.log("Error : ", error)
-        }
 
-        return res.status(statusCode).json(responseJSON(data, status, messages))
+            // Rolling back the change before meet failed case
+            await t.rollback()
+
+            return res.status(500).json(responseJSON(null, 'failed', 'failed while create order'))
+
+        }
 
     }
 
+    // Update Order Status to success
     static updateOrder = async (req, res) => {
-
-        let id = +req.params.id
-        let statusCode = 200
-        let status
-        let message
-        let order
 
         try {
 
-            order = await Order.findOne({
+            const id = req.params.id
+            const userId = req.user.id
+
+            // Find the order that you want to update
+            const order = await Order.findOne({
                 where: {
-                    id: id
+                    [Op.and]: [{ id: id }, { userId: userId }]
                 }
             })
 
+            // If no order found it return error 404
             if (!order) {
-                status = 'failed'
-                statusCode = 404
-                message = `Order with id ${id} not found`
-                throw error
+                return res.status(404).json(responseJSON(null, 'failed', `you have no order with id ${id}`))
             }
 
-            if (order.dataValues.status === 'order complete') {
-                status = 'failed'
-                statusCode = 409
-                message = `Order with id ${id} has been completed, please make a new order`
-                throw error
+            // If order found is success or failed it will return error 400
+            if (order.dataValues.status === 'success') {
+                return res.status(400).json(responseJSON(null, 'failed', 'your order has been completed, make a new order'))
+            } else if (order.dataValues.status === 'failed') {
+                return res.status(400).json(responseJSON(null, 'failed', 'your order is expired, make a new order'))
             }
 
-            if(order.dataValues.status === "waiting for order") {
-                status = 'failed'
-                statusCode = 409
-                message = `Please add some product to order`
-                throw error
-            }
-
-            await Order.update({
-                status : 'order complete'
-            }, {
-                where :{
-                    id : id
-                }
+            // After all guard is passed it will update the order status to success
+            await order.update({
+                status: 'success'
             })
+
+            return res.status(200).json(responseJSON(null))
 
         } catch (error) {
-            return res.status(statusCode).json(responseJSON(null, status, message))
+
+            return res.status(500).json(responseJSON(null, 'failed', 'failed while update order status'))
+
         }
 
-        return res.status(statusCode).json(responseJSON(null))
+    }
+
+    // Update Order Status that is executed by cron
+    static updateExpiredOrder = async (req, res) => {
+
+        try {
+
+            // Update order status which has been expired and still no payment
+            await Order.update({
+                status: 'failed'
+            }, {
+                where: {
+                    status: 'waiting for payment',
+                    expiresOn: {
+                        [Op.lt]: new Date()
+                    }
+                }
+            })
+
+            return res.status(200).json(responseJSON(null))
+
+        } catch (error) {
+
+            return res.status(500).json(responseJSON(null, 'failed', 'failed while update data'))
+
+        }
 
     }
 
 }
+
+// Sceduled execute update status for expired order
+// Order status is updated every 10s
+cron.schedule('*/10 * * * * *', async () => {
+    await OrderController.updateExpiredOrder()
+})
 
 
 module.exports = { OrderController }
