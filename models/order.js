@@ -17,17 +17,20 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'orderId'
       }),
 
-      Order.belongsTo(models.User, {
-        targetKey: 'id',
-        foreignKey : 'userId'
-      })
+        Order.belongsTo(models.User, {
+          as: 'user',
+          targetKey: 'id',
+          foreignKey: 'userId'
+        })
 
       Order.belongsTo(models.PaymentMethod, {
+        as: 'paymentMethod',
         targetKey: 'id',
         foreignKey: 'paymentId'
       })
 
       Order.belongsTo(models.Address, {
+        as: 'address',
         targetKey: 'id',
         foreignKey: 'addressId'
       })
@@ -55,7 +58,7 @@ module.exports = (sequelize, DataTypes) => {
     status: DataTypes.STRING,
     expiresOn: {
       type: DataTypes.DATE,
-      defaultValue: new Date(new Date().setHours(new Date().getHours() + 2))
+      allowNull: false
     },
     totalPrice: DataTypes.REAL,
     addressId: DataTypes.UUID
