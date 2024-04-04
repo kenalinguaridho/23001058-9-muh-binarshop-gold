@@ -4,6 +4,7 @@ const
     { Op } = require("sequelize"),
     bcrypt = require('bcryptjs'),
     jwt = require('jsonwebtoken'),
+    { unlink } = require('../helpers/unlinkMedia.js'),
     { mailer } = require('../lib/mailer.js');
 
 require('dotenv').config()
@@ -12,15 +13,15 @@ class UserController {
 
     static registerUser = async (req, res) => {
 
-        let { name, username, email, phone, password, rePassword } = req.body
-
-        let statusCode = 201
-
-        if (rePassword != password) {
-            return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
-        }
-
         try {
+
+            let { name, username, email, phone, password, rePassword } = req.body
+
+            if (rePassword != password) {
+                return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
+            }
+
+
             const data = {
                 name: name,
                 username: username,
@@ -33,16 +34,18 @@ class UserController {
 
             mailer(user)
 
-            return res.status(statusCode).json(responseJSON(user.dataValues))
+            return res.status(201).json(responseJSON(user.dataValues))
 
 
         } catch (error) {
+
+            unlink(req.file)
 
             let statusCode = 500
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
-            } else if(error.name === 'SequelizeValidationError') {
+            } else if (error.name === 'SequelizeValidationError') {
                 statusCode = 400
             }
 
@@ -54,15 +57,14 @@ class UserController {
 
     static registerAdmin = async (req, res) => {
 
-        let { name, username, email, phone, password, rePassword } = req.body
-
-        let statusCode = 201
-
-        if (rePassword != password) {
-            return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
-        }
-
         try {
+
+            let { name, username, email, phone, password, rePassword } = req.body
+
+            if (rePassword != password) {
+                return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
+            }
+
             const data = {
                 name: name,
                 username: username,
@@ -76,16 +78,18 @@ class UserController {
 
             mailer(user)
 
-            return res.status(statusCode).json(responseJSON(user.dataValues))
+            return res.status(201).json(responseJSON(user.dataValues))
 
 
         } catch (error) {
+
+            unlink(req.file)
 
             let statusCode = 500
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
-            } else if(error.name === 'SequelizeValidationError') {
+            } else if (error.name === 'SequelizeValidationError') {
                 statusCode = 400
             }
 
@@ -100,14 +104,14 @@ class UserController {
         let { userLogin, password } = req.body
 
         try {
-            
+
             const payload = {
                 userLogin: userLogin ?? '',
                 password: password ?? ''
             }
 
             payload.userLogin = payload.userLogin.toLowerCase()
-            
+
             let user = await User.findOne({
                 where: {
                     [Op.or]: [{ username: payload.userLogin }, { email: payload.userLogin }]

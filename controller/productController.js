@@ -1,6 +1,7 @@
 const
     { responseJSON } = require('../helpers/response.js'),
     { Op } = require("sequelize"),
+    {unlink} = require('../helpers/unlinkMedia.js'),
     { Product, Category } = require('../models')
 
 class ProductController {
@@ -66,11 +67,11 @@ class ProductController {
 
             const payload = {
                 sku: sku,
-                categoryId: categoryId,
+                categoryId: +categoryId,
                 name: name,
                 description: description,
-                price: price,
-                stock: stock
+                price: +price,
+                stock: +stock
             }
 
             const category = await Category.findOne({
@@ -88,6 +89,8 @@ class ProductController {
             return res.status(201).json(responseJSON(product))
 
         } catch (error) {
+
+            unlink(req.files)
 
             let statusCode = 500
 
