@@ -33,13 +33,13 @@ class UserController {
             }
             if (req.file) {
                 await Cloudinary.upload(req.file.path)
+                unlink(req.file)
             }
 
             let user = await User.create(data, {transaction: t})
 
             mailer(user)
             
-            unlink(req.file)
 
             t.commit()
 
@@ -49,7 +49,9 @@ class UserController {
         } catch (error) {
 
             t.rollback()
-            unlink(req.file)
+            if (req.file) {
+                unlink(req.file)
+            }
 
             let statusCode = 500
 
