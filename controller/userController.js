@@ -1,10 +1,11 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { User } = require('../models'),
+    { User, sequelize } = require('../models'),
     { Op } = require("sequelize"),
     bcrypt = require('bcryptjs'),
     jwt = require('jsonwebtoken'),
     { unlink } = require('../helpers/unlinkMedia.js'),
+    Cloudinary = require('../lib/cloudinary.js'),
     { mailer } = require('../lib/mailer.js');
 
 require('dotenv').config()
@@ -13,6 +14,7 @@ class UserController {
 
     static registerUser = async (req, res) => {
 
+        const t = await sequelize.transaction()
         try {
 
             let { name, username, email, phone, password, rePassword } = req.body
@@ -29,16 +31,24 @@ class UserController {
                 phone: phone,
                 password: password
             }
+            if (req.file) {
+                await Cloudinary.upload(req.file.path)
+            }
 
-            let user = await User.create(data)
+            let user = await User.create(data, {transaction: t})
 
             mailer(user)
+            
+            unlink(req.file)
+
+            t.commit()
 
             return res.status(201).json(responseJSON(user.dataValues))
 
 
         } catch (error) {
 
+            t.rollback()
             unlink(req.file)
 
             let statusCode = 500
