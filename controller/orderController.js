@@ -1,6 +1,6 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { Op, DATE } = require("sequelize"),
+    { Op, DATE, where } = require("sequelize"),
     { Order, OrderProduct, Address, PaymentMethod, Product, sequelize } = require('../models'),
     cron = require('node-cron');
 
@@ -90,7 +90,7 @@ class OrderController {
             let total_price = 0
 
             // Order will be expired 2 hours after order created
-            const expired = new Date(new Date().setHours(new Date().getHours() + 2))
+            const expired = new Date(new Date().setMinutes(new Date().getMinutes() + 1))
 
             // Find User's active address to deliver the order
             const activeAddress = await Address.findOne({
@@ -223,23 +223,62 @@ class OrderController {
     // Update Order Status that is executed by cron
     static updateExpiredOrder = async (req, res) => {
 
+        // Transaction initiation
+        const t = await sequelize.transaction()
+
         try {
 
-            // Update order status which has been expired and still no payment
-            await Order.update({
-                status: 'failed'
-            }, {
-                where: {
-                    status: 'waiting for payment',
-                    expiresOn: {
-                        [Op.lt]: new Date()
+            // Find order with certain attributes
+            const orders = await Order.findAll({
+                attributes: ['id', 'expiresOn', 'status']
+            })
+
+            // Do looping for all orders
+            orders.forEach(async order => {
+                // Check if order is waiting for payment and expired
+                if (order.expiresOn < new Date() && order.status === 'waiting for payment') {
+
+                    // If order is expired and no payment it will update to failed
+                    await Order.update({
+                        status: 'failed'
+                    }, {
+                        where: {
+                            id: order.id
+                        },
+                        transaction: t
                     }
+                    )
+
+                    // Find all order products by order id
+                    const orderProducts = await OrderProduct.findAll({
+                        where: {
+                            orderId: order.id
+                        }
+                    })
+
+                    // Do looping for all order product with order id to update product stock
+                    orderProducts.forEach(async orderProduct => {
+                        await Product.increment({
+                            stock: orderProduct.amount
+                        }, {
+                            where: {
+                                id: orderProduct.productId
+                            },
+                            transaction: t
+                        })
+                    });
                 }
             })
+
+            // Commit after transaction complete
+            await t.commit()
 
             return res.status(200).json(responseJSON(null))
 
         } catch (error) {
+
+            // Rollback after transaction failed
+            await t.rollback()
 
             return res.status(500).json(responseJSON(null, 'failed', 'failed while update data'))
 
