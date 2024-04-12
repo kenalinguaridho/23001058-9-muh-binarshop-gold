@@ -22,6 +22,11 @@ module.exports = (sequelize, DataTypes) => {
         sourceKey: "id",
         foreignKey: 'userId'
       })
+      User.hasOne(models.Image, {
+        as:'image',
+        sourceKey: 'id',
+        foreignKey: 'parentId'
+      })
     }
   }
   User.init({
