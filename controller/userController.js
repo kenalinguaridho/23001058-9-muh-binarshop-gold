@@ -1,6 +1,6 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { User, sequelize } = require('../models'),
+    { User, Image, sequelize } = require('../models'),
     { Op } = require("sequelize"),
     bcrypt = require('bcryptjs'),
     jwt = require('jsonwebtoken'),
@@ -23,32 +23,44 @@ class UserController {
                 return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
             }
 
-
-            const data = {
+            const userPayload = {
                 name: name,
                 username: username,
                 email: email,
                 phone: phone,
                 password: password
             }
+
+            let user = await User.create(userPayload, { transaction: t })
+
             if (req.file) {
-                await Cloudinary.upload(req.file.path)
+                
+                const imageResult = await Cloudinary.upload(req.file.path)
+                
                 unlink(req.file)
+
+                const imagePayload = {
+                    usage: 'avatar',
+                    parentId: user.dataValues.id,
+                    url: imageResult.secure_url,
+                    publicId: imageResult.public_id
+                }
+
+                await Image.create(imagePayload, { transaction: t })
+
             }
 
-            let user = await User.create(data, {transaction: t})
-
             mailer(user)
-            
 
-            t.commit()
+            await t.commit()
 
             return res.status(201).json(responseJSON(user.dataValues))
 
 
         } catch (error) {
 
-            t.rollback()
+            await t.rollback()
+
             if (req.file) {
                 unlink(req.file)
             }
@@ -69,6 +81,8 @@ class UserController {
 
     static registerAdmin = async (req, res) => {
 
+        const t = await sequelize.transaction()
+
         try {
 
             let { name, username, email, phone, password, rePassword } = req.body
@@ -86,14 +100,35 @@ class UserController {
                 password: password
             }
 
-            const user = await User.create(data)
+            const user = await User.create(data, { transaction: t })
+
+            if (req.file) {
+
+                const imageResult = await Cloudinary.upload(req.file.path)
+                
+                unlink(req.file)
+
+                const imagePayload = {
+                    usage: 'avatar',
+                    parentId: user.dataValues.id,
+                    url: imageResult.secure_url,
+                    publicId: imageResult.public_id
+                }
+
+                await Image.create(imagePayload, { transaction: t })
+
+            }
 
             mailer(user)
+
+            await t.commit()
 
             return res.status(201).json(responseJSON(user.dataValues))
 
 
         } catch (error) {
+
+            await t.rollback()
 
             unlink(req.file)
 
@@ -186,47 +221,74 @@ class UserController {
 
     static editUser = async (req, res) => {
 
-        let { name, username, email, phone, address, password, rePassword } = req.body
+        //     let { name, username, email, phone, address, password, rePassword } = req.body
 
-        let id = req.user.id
+        //     let id = req.user.id
 
-        if (rePassword != password) {
-            return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
-        }
+        //     if (rePassword != password) {
+        //         return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
+        //     }
 
-        try {
+        //     const t = await sequelize.transaction()
 
-            const user = await User.findByPk(id)
+        //     try {
 
-            const payload = {
-                name: name ?? user.dataValues.name,
-                username: username ?? user.dataValues.username,
-                email: email ?? user.dataValues.email,
-                phone: phone ?? user.dataValues.phone,
-                address: address ?? user.dataValues.address,
-                password: password ?? user.dataValues.password
-            }
+        //         const user = await User.findByPk(id)
 
-            await user.update(payload, {
-                where: {
-                    id
-                },
-                individualHooks: true
-            })
+        //         const payload = {
+        //             name: name ?? user.dataValues.name,
+        //             username: username ?? user.dataValues.username,
+        //             email: email ?? user.dataValues.email,
+        //             phone: phone ?? user.dataValues.phone,
+        //             address: address ?? user.dataValues.address,
+        //             password: password ?? user.dataValues.password
+        //         }
 
-            return res.status(200).json(responseJSON(user))
+        //         if (req.file) {
+        //             const image = await Image.findOne({
+        //                 where: {
+        //                     parentId: user.dataValues.id
+        //                 }
+        //             })
 
-        } catch (error) {
+        //             if (image) {
+        //                 await Cloudinary.rollback(image.dataValues.publicId)
+        //             }
 
-            let statusCode = 500
+        //             const imageResult = await Cloudinary.upload(req.file.path)
 
-            if (error.name === 'SequelizeValidationError') {
-                statusCode = 400
-            }
+        //             await image.update({
+        //                 url: imageResult.secure_url,
+        //                 publicId: imageResult.public_id
+        //             }, {
+        //                 transaction: t
+        //             })
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
+        //         }
 
-        }
+        //         await user.update(payload, {
+        //             where: {
+        //                 id
+        //             },
+        //             individualHooks: true,
+        //             transaction: t
+        //         })
+
+        //         await t.commit()
+        //         return res.status(200).json(responseJSON(user))
+
+        //     } catch (error) {
+
+        //         let statusCode = 500
+
+        //         if (error.name === 'SequelizeValidationError') {
+        //             statusCode = 400
+        //         }
+        //         await t.rollback()
+
+        //         return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
+
+        //     }
 
     }
 
