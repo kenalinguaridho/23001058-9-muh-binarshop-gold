@@ -18,5 +18,6 @@ userRouter
     .get('/profile', UserController.getUser)
     .put('/profile', upload.single('avatar'), UserController.editUser)
     .delete('/', UserController.deleteUser)
+    .delete('/image', UserController.deleteAvatar)
 
 module.exports = userRouter
