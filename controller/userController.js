@@ -287,6 +287,8 @@ class UserController {
 
                 }
 
+                unlink(req.file)
+
             }
 
             await user.update(payload, {
@@ -304,6 +306,10 @@ class UserController {
         } catch (error) {
 
             let statusCode = 500
+
+            if (req.file) {
+                unlink(req.file)
+            }
 
             if (error.name === 'SequelizeValidationError') {
                 statusCode = 400
