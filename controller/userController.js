@@ -148,9 +148,9 @@ class UserController {
 
     static login = async (req, res) => {
 
-        let { userLogin, password } = req.body
-
         try {
+
+            let { userLogin, password } = req.body
 
             const payload = {
                 userLogin: userLogin ?? '',
@@ -230,82 +230,97 @@ class UserController {
 
     static editUser = async (req, res) => {
 
-        //     let { name, username, email, phone, address, password, rePassword } = req.body
+        const t = await sequelize.transaction()
 
-        //     let id = req.user.id
+        try {
 
-        //     if (rePassword != password) {
-        //         return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
-        //     }
+            let { name, username, email, phone, address, password, rePassword } = req.body
 
-        //     const t = await sequelize.transaction()
+            let id = req.user.id
 
-        //     try {
+            if (rePassword != password) {
+                return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
+            }
 
-        //         const user = await User.findByPk(id)
+            const user = await User.findByPk(id)
 
-        //         const payload = {
-        //             name: name ?? user.dataValues.name,
-        //             username: username ?? user.dataValues.username,
-        //             email: email ?? user.dataValues.email,
-        //             phone: phone ?? user.dataValues.phone,
-        //             address: address ?? user.dataValues.address,
-        //             password: password ?? user.dataValues.password
-        //         }
+            const payload = {
+                name: name ?? user.dataValues.name,
+                username: username ?? user.dataValues.username,
+                email: email ?? user.dataValues.email,
+                phone: phone ?? user.dataValues.phone,
+                address: address ?? user.dataValues.address,
+                password: password ?? user.dataValues.password
+            }
 
-        //         if (req.file) {
-        //             const image = await Image.findOne({
-        //                 where: {
-        //                     parentId: user.dataValues.id
-        //                 }
-        //             })
+            if (req.file) {
 
-        //             if (image) {
-        //                 await Cloudinary.rollback(image.dataValues.publicId)
-        //             }
+                const image = await Image.findOne({
+                    where: {
+                        parentId: user.dataValues.id
+                    }
+                })
 
-        //             const imageResult = await Cloudinary.upload(req.file.path)
+                const imageResult = await Cloudinary.upload(req.file.path)
 
-        //             await image.update({
-        //                 url: imageResult.secure_url,
-        //                 publicId: imageResult.public_id
-        //             }, {
-        //                 transaction: t
-        //             })
+                if (image) {
 
-        //         }
+                    await Cloudinary.rollback(image.dataValues.publicId)
 
-        //         await user.update(payload, {
-        //             where: {
-        //                 id
-        //             },
-        //             individualHooks: true,
-        //             transaction: t
-        //         })
+                    await image.update({
+                        url: imageResult.secure_url,
+                        publicId: imageResult.public_id
+                    }, {
+                        transaction: t
+                    })
 
-        //         await t.commit()
-        //         return res.status(200).json(responseJSON(user))
+                } else {
 
-        //     } catch (error) {
+                    const imagePayload = {
+                        usage: 'avatar',
+                        parentId: user.dataValues.id,
+                        url: imageResult.secure_url,
+                        publicId: imageResult.public_id
+                    }
 
-        //         let statusCode = 500
+                    await Image.create(imagePayload, { transaction: t })
 
-        //         if (error.name === 'SequelizeValidationError') {
-        //             statusCode = 400
-        //         }
-        //         await t.rollback()
+                }
 
-        //         return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
+            }
 
-        //     }
+            await user.update(payload, {
+                where: {
+                    id
+                },
+                individualHooks: true,
+                transaction: t
+            })
+
+            await t.commit()
+
+            return res.status(200).json(responseJSON(user))
+
+        } catch (error) {
+
+            let statusCode = 500
+
+            if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+            }
+            await t.rollback()
+
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
+
+        }
 
     }
 
     static deleteUser = async (req, res) => {
 
-        let id = req.user.id
-
         try {
+        
+            let id = req.user.id
 
             const userDeleted = await User.destroy({
                 where: {
@@ -314,14 +329,14 @@ class UserController {
             })
 
             if (userDeleted = 0) {
-                return res.status(400).json(responseJSON(null, 'failed', `failed while deleting account`))
+                throw error
             }
 
             return res.status(200).json(responseJSON(null))
 
         } catch (error) {
 
-            return res.status(500).json(responseJSON(null, 'failed', error.message))
+            return res.status(500).json(responseJSON(null, 'failed', `failed while deleting account`))
 
         }
 
