@@ -1,6 +1,6 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { Op, DATE, where } = require("sequelize"),
+    { Op } = require("sequelize"),
     { Order, OrderProduct, Address, PaymentMethod, Product, sequelize } = require('../models'),
     cron = require('node-cron');
 
@@ -230,45 +230,49 @@ class OrderController {
 
             // Find order with certain attributes
             const orders = await Order.findAll({
-                attributes: ['id', 'expiresOn', 'status']
+                where: {
+                    expiresOn: {
+                        [Op.lt]: new Date()
+                    },
+                    status: 'waiting for payment'
+                },
+                attributes: ['id']
             })
-
-            // Do looping for all orders
-            orders.forEach(async order => {
-                // Check if order is waiting for payment and expired
-                if (order.expiresOn < new Date() && order.status === 'waiting for payment') {
-
-                    // If order is expired and no payment it will update to failed
+            
+            if (orders.length > 0) {
+                for (let i = 0; i < orders.length; i++) {
                     await Order.update({
                         status: 'failed'
                     }, {
                         where: {
-                            id: order.id
+                            id: orders[i].id
                         },
                         transaction: t
-                    }
-                    )
-
-                    // Find all order products by order id
+                    })
+                    
+                }
+                
+                for (let i = 0; i < orders.length; i++) {
                     const orderProducts = await OrderProduct.findAll({
                         where: {
-                            orderId: order.id
+                            orderId: orders[i].id
                         }
                     })
 
-                    // Do looping for all order product with order id to update product stock
-                    orderProducts.forEach(async orderProduct => {
+                    for (let i = 0; i < orderProducts.length; i++) {
                         await Product.increment({
-                            stock: orderProduct.amount
+                            stock: orderProducts[i].amount
                         }, {
                             where: {
-                                id: orderProduct.productId
+                                id: orderProducts[i].productId
                             },
                             transaction: t
                         })
-                    });
+                    }
+
                 }
-            })
+
+            }
 
             // Commit after transaction complete
             await t.commit()
@@ -290,7 +294,7 @@ class OrderController {
 
 // Sceduled execute update status for expired order
 // Order status is updated every 10s
-cron.schedule('*/10 * * * * *', async () => {
+cron.schedule('*/20 * * * * *', async () => {
     await OrderController.updateExpiredOrder()
 })
 
