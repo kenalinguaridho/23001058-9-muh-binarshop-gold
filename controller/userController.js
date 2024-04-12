@@ -1,7 +1,7 @@
 const
     { responseJSON } = require('../helpers/response.js'),
     { User, Image, sequelize } = require('../models'),
-    { Op } = require("sequelize"),
+    { Op, where } = require("sequelize"),
     bcrypt = require('bcryptjs'),
     jwt = require('jsonwebtoken'),
     { unlink } = require('../helpers/unlinkMedia.js'),
@@ -34,9 +34,9 @@ class UserController {
             let user = await User.create(userPayload, { transaction: t })
 
             if (req.file) {
-                
+
                 const imageResult = await Cloudinary.upload(req.file.path)
-                
+
                 unlink(req.file)
 
                 const imagePayload = {
@@ -105,7 +105,7 @@ class UserController {
             if (req.file) {
 
                 const imageResult = await Cloudinary.upload(req.file.path)
-                
+
                 unlink(req.file)
 
                 const imagePayload = {
@@ -204,7 +204,16 @@ class UserController {
 
         try {
 
-            const user = await User.findByPk(req.user.id)
+            const user = await User.findByPk(
+                req.user.id,
+                {
+                    attributes: ['name', 'username'],
+                    include: {
+                        model: Image,
+                        as: 'image',
+                        attributes: ['url']
+                    },
+                })
 
             if (!user) throw error
 
@@ -212,7 +221,7 @@ class UserController {
 
         } catch (error) {
 
-            return res.status(500).json(responseJSON(null, 'failed', error.message))
+            return res.status(500).json(responseJSON(null, 'failed', 'failed while fetch data'))
 
         }
 
