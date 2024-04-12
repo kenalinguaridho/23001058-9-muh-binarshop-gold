@@ -378,6 +378,34 @@ class UserController {
 
     }
 
+    static deleteAvatar = async (req, res) => {
+
+        const t = await sequelize.transaction()
+
+        try {
+
+            const image = await Image.findOne({
+                where: {
+                    parentId: req.user.id
+                }
+            })
+
+            await Cloudinary.rollback(image.dataValues.publicId)
+            
+            await image.destroy()
+
+            await t.commit()
+
+            return res.status(200).json(responseJSON(null))
+
+        } catch (error) {
+
+            await t.rollback()
+
+            return res.status(500).json(responseJSON(null, 'failed', 'error while delete image'))
+        }
+    }
+
 }
 
 module.exports = { UserController }
