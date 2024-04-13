@@ -16,8 +16,9 @@ userRouter.use(passport.initialize(), Auth.authentication)
 
 userRouter
     .get('/profile', UserController.getUser)
-    .put('/profile', upload.single('avatar'), UserController.editUser)
+    .put('/profile', UserController.editUser)
     .delete('/', UserController.deleteUser)
-    .delete('/image', UserController.deleteAvatar)
+    .post('/avatar', upload.single('avatar'), UserController.uploadAvatar)
+    .delete('/avatar', UserController.deleteAvatar)
 
 module.exports = userRouter

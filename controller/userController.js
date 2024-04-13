@@ -165,12 +165,12 @@ class UserController {
                 }
             })
 
-            if (!user.isActive) {
-                return res.status(403).json(responseJSON(null, 'failed', 'user is inactive'))
-            }
-
             if (!user) {
                 return res.status(404).json(responseJSON(null, 'failed', 'user not found'))
+            }
+
+            if (!user.isActive) {
+                return res.status(403).json(responseJSON(null, 'failed', 'user is inactive'))
             }
 
             const passwordCompared = bcrypt.compareSync(payload.password, user.dataValues.password)
@@ -253,44 +253,6 @@ class UserController {
                 password: password ?? user.dataValues.password
             }
 
-            if (req.file) {
-
-                const image = await Image.findOne({
-                    where: {
-                        parentId: user.dataValues.id
-                    }
-                })
-
-                const imageResult = await Cloudinary.upload(req.file.path)
-
-                if (image) {
-
-                    await Cloudinary.rollback(image.dataValues.publicId)
-
-                    await image.update({
-                        url: imageResult.secure_url,
-                        publicId: imageResult.public_id
-                    }, {
-                        transaction: t
-                    })
-
-                } else {
-
-                    const imagePayload = {
-                        usage: 'avatar',
-                        parentId: user.dataValues.id,
-                        url: imageResult.secure_url,
-                        publicId: imageResult.public_id
-                    }
-
-                    await Image.create(imagePayload, { transaction: t })
-
-                }
-
-                unlink(req.file)
-
-            }
-
             await user.update(payload, {
                 where: {
                     id
@@ -325,7 +287,7 @@ class UserController {
     static deleteUser = async (req, res) => {
 
         try {
-        
+
             let id = req.user.id
 
             const userDeleted = await User.destroy({
@@ -378,6 +340,86 @@ class UserController {
 
     }
 
+    static uploadAvatar = async (req, res) => {
+
+        const t = await sequelize.transaction()
+
+        let imageResult
+
+        try {
+
+            // return error if no image is uploaded
+            if (!req.file) {
+                return res.status(400).json(responseJSON(null, 'failed', 'no image is uploaded'))
+            }
+
+            // Find if any image related
+            const image = await Image.findOne({
+                where: {
+                    parentId: req.user.id
+                }
+            })
+
+            let currentPublicId
+
+            // Upload new user avatar image
+            imageResult = await Cloudinary.upload(req.file.path)
+
+            if (image) {
+
+                // If image related is found
+                // Assign current publicId before update with new publicId
+                currentPublicId = image.dataValues.publicId
+                // await Cloudinary.rollback(image.dataValues.publicId)
+
+                // Update image data in database
+                await image.update({
+                    url: imageResult.secure_url,
+                    publicId: imageResult.public_id
+                }, {
+                    transaction: t
+                })
+                
+                // Delete old image from cloudinary
+                Cloudinary.rollback(currentPublicId)
+
+            } else {
+
+                // If image related is not found create new image row
+                const imagePayload = {
+                    usage: 'avatar',
+                    parentId: req.user.id,
+                    url: imageResult.secure_url,
+                    publicId: imageResult.public_id
+                }    
+
+                await Image.create(imagePayload, { transaction: t })
+
+            }    
+
+            // Clear uploads folder
+            unlink(req.file)
+
+            // commit all change
+            await t.commit()
+
+            return res.status(200).json(responseJSON(null))
+
+        } catch (error) {
+
+            // Clear uploads folder
+            unlink(req.file)
+
+            // Delete new user avatar from cloudinary
+            if (imageResult) {
+                Cloudinary.rollback(imageResult.public_id)
+            }
+
+            return res.status(500).json(responseJSON(null, 'failed', 'error while upload avatar'))
+
+        }
+    }
+
     static deleteAvatar = async (req, res) => {
 
         const t = await sequelize.transaction()
@@ -391,7 +433,7 @@ class UserController {
             })
 
             await Cloudinary.rollback(image.dataValues.publicId)
-            
+
             await image.destroy()
 
             await t.commit()
