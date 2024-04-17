@@ -1,8 +1,9 @@
 const
     { responseJSON } = require('../helpers/response.js'),
     { Op } = require("sequelize"),
-    {unlink} = require('../helpers/unlinkMedia.js'),
-    { Product, Category } = require('../models')
+    { unlink } = require('../helpers/unlinkMedia.js'),
+    { Product, Category, Image, sequelize } = require('../models'),
+    Cloudinary = require('../lib/cloudinary.js')
 
 class ProductController {
 
@@ -61,6 +62,10 @@ class ProductController {
 
     static createNewProduct = async (req, res) => {
 
+        const t = await sequelize.transaction()
+
+        let arrOfPublicId = []
+
         try {
 
             const { sku, categoryId, name, description, price, stock } = req.body
@@ -84,23 +89,59 @@ class ProductController {
                 return res.status(404).json(responseJSON(null, 'failed', `no category with id ${payload.categoryId}`))
             }
 
-            const product = await Product.create(payload)
+            const product = await Product.create(payload, { transaction: t })
+
+            if (req.files) {
+                let imagesPayload = []
+                for (let i = 0; i < req.files.length; i++) {
+                    let imageResult = await Cloudinary.upload(req.files[i].path)
+                    arrOfPublicId.push(imageResult.public_id)
+
+                    if (i > 3) {
+                        throw error
+                    }
+                    
+                    let imagePayload = {
+                        usage: 'product',
+                        parentId: product.dataValues.id,
+                        url: imageResult.secure_url,
+                        publicId: imageResult.public_id
+                    }
+
+                    imagesPayload.push(imagePayload)
+                }
+                await Image.bulkCreate(imagesPayload, { transaction: t })
+
+                unlink(req.files)
+            }
+
+            await t.commit()
 
             return res.status(201).json(responseJSON(product))
 
         } catch (error) {
 
-            unlink(req.files)
+            await t.rollback()
+
+            let errorMessage
+
+            if (arrOfPublicId.length != 0) {
+                unlink(req.files)
+                await Cloudinary.rollback(arrOfPublicId)
+                errorMessage = 'error while upload images'
+            }
 
             let statusCode = 500
-
+            
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
+                errorMessage = error.errors[0].message
             } else if (error.name === 'SequelizeValidationError') {
+                errorMessage = error.errors[0].message
                 statusCode = 400
             }
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while creating new product'))
+            return res.status(statusCode).json(responseJSON(null, 'failed', errorMessage))
 
         }
 
@@ -147,7 +188,7 @@ class ProductController {
                 statusCode = 400
             }
 
-            return res.status(500).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
+            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
 
         }
 
