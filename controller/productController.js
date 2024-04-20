@@ -221,7 +221,11 @@ class ProductController {
     static restock = async (req, res) => {
         try {
 
-            const newStock = req.body.stock
+            const newStock = +req.body.stock
+
+            if (!newStock) {
+                return res.status(400).json(responseJSON(null, 'failed', 'new stock must be in request body'))
+            }
 
             const product = await Product.findByPk(req.params.id)
 
@@ -229,10 +233,8 @@ class ProductController {
                 return res.status(404).json(responseJSON(null, 'failed', `no product with id ${id}`))
             }
 
-            await product.update({
-                stock: newStock + product.dataValues.stock
-            })
-
+            await product.increment({'stock': newStock})
+            
             return res.status(200).json(responseJSON(null))
 
         } catch (error) {
