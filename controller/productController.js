@@ -97,10 +97,6 @@ class ProductController {
                     let imageResult = await Cloudinary.upload(req.files[i].path)
                     arrOfPublicId.push(imageResult.public_id)
 
-                    if (i > 3) {
-                        throw error
-                    }
-                    
                     let imagePayload = {
                         usage: 'product',
                         parentId: product.dataValues.id,
