@@ -24,9 +24,9 @@ class CategoryController {
     static getCategoryById = async (req, res) => {
 
         try {
-        
+
             let id = +req.params.id
-            
+
             const category = await Category.findByPk(
                 id,
                 {
@@ -83,26 +83,20 @@ class CategoryController {
     static updateCategory = async (req, res) => {
 
         try {
-        
-            let id = req.params.id
+
+            let id = +req.params.id
 
             const category = await Category.findByPk(id)
 
-            if(!category) {
+            if (!category) {
                 return res.status(404).json(responseJSON(null, 'failed', `no category with id ${id}`))
             }
-            
+
             const payload = {
                 name: req.body.name ?? category.dataValues.name
             }
 
-            await category.update(
-                payload,
-                {
-                    where: {
-                        id: id
-                    }
-                })
+            await category.update(payload)
 
             return res.status(200).json(responseJSON(category))
 
@@ -129,7 +123,7 @@ class CategoryController {
 
             const category = await Category.findByPk(id)
 
-            if(!category) {
+            if (!category) {
                 return res.status(404).json(responseJSON(null, 'failed', `no category with id ${id}`))
             }
 
