@@ -1,6 +1,5 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { Op, where } = require("sequelize"),
     { unlink } = require('../helpers/unlinkMedia.js'),
     { Product, Category, Image, sequelize } = require('../models'),
     Cloudinary = require('../lib/cloudinary.js')
