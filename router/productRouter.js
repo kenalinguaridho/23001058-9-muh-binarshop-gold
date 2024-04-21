@@ -13,7 +13,7 @@ productRouter
 productRouter.use(passport.initialize(), Auth.authentication, Auth.authorizeAdmin)
 productRouter
     .post('/',upload.array('products', 8), ProductController.createNewProduct)
-    .put('/:id', ProductController.editProduct)
+    .put('/:id',upload.array('products', 8), ProductController.editProduct)
     .delete('/:id', ProductController.deleteProduct)
     .patch('/:id', ProductController.restock)
 

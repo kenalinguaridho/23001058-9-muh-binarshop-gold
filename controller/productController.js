@@ -1,6 +1,6 @@
 const
     { responseJSON } = require('../helpers/response.js'),
-    { Op } = require("sequelize"),
+    { Op, where } = require("sequelize"),
     { unlink } = require('../helpers/unlinkMedia.js'),
     { Product, Category, Image, sequelize } = require('../models'),
     Cloudinary = require('../lib/cloudinary.js')
@@ -128,7 +128,7 @@ class ProductController {
             }
 
             let statusCode = 500
-            
+
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
                 errorMessage = error.errors[0].message
@@ -141,11 +141,13 @@ class ProductController {
 
         }
 
-
     }
 
     static editProduct = async (req, res) => {
 
+        let incomingPublicIds = []
+
+        const t = await sequelize.transaction()
         try {
 
             const id = req.params.id
@@ -168,11 +170,60 @@ class ProductController {
                 price: price ? price : product.dataValues.price,
             }
 
-            await Product.update(payload, {
+            const images = await Image.findAll({
                 where: {
-                    id: id
+                    parentId: id
                 }
             })
+
+            let currentPublicIds = []
+
+            for (let j = 0; j < images.length; j++) {
+                currentPublicIds.push(images[j].dataValues.publicId)
+            }
+
+            if (req.files) {
+                // Here is logic for upload images and store data needed to db
+
+                let imagesPayload = []
+
+                for (let i = 0; i < req.files.length; i++) {
+                    let incomingImage = await Cloudinary.upload(req.files[i].path)
+
+                    incomingPublicIds.push(incomingImage.public_id)
+
+                    let imagePayload = {
+                        usage: 'product',
+                        parentId: product.dataValues.id,
+                        url: incomingImage.secure_url,
+                        publicId: incomingImage.public_id
+                    }
+
+                    imagesPayload.push(imagePayload)
+
+                }
+
+                await Image.bulkCreate(imagesPayload, { transaction: t })
+                
+                unlink(req.files)
+            }
+
+            await product.update(payload, {
+                transaction: t
+            })
+
+            if (images.length > 0) {
+                await Image.destroy({
+                    where: {
+                        publicId: currentPublicIds
+                    },
+                    transaction: t
+                })
+
+                await Cloudinary.rollback(currentPublicIds)
+            }
+
+            await t.commit()
 
             return res.status(200).json(responseJSON(null))
 
@@ -180,11 +231,21 @@ class ProductController {
 
             let statusCode = 500
 
+            await t.rollback()
+
+            if (req.files.length > 0) {
+                unlink(req.files)
+            }
+
+            if (incomingPublicIds.length > 0) {
+                await Cloudinary.rollback(incomingPublicIds)
+            }
+
             if (error.name === 'SequelizeValidationError') {
                 statusCode = 400
             }
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
+            return res.status(statusCode).json(responseJSON(null, 'failed', 'error while updating data'))
 
         }
 
@@ -233,8 +294,8 @@ class ProductController {
                 return res.status(404).json(responseJSON(null, 'failed', `no product with id ${id}`))
             }
 
-            await product.increment({'stock': newStock})
-            
+            await product.increment({ 'stock': newStock })
+
             return res.status(200).json(responseJSON(null))
 
         } catch (error) {
