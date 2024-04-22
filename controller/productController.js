@@ -11,14 +11,21 @@ class ProductController {
         try {
 
             const products = await Product.findAll({
-                attributes: ['id', 'categoryId', 'name', 'price', 'stock']
+                attributes: ['id', 'name', 'price', 'stock'],
+                include: {
+                    model: Image,
+                    as: 'images',
+                    attributes: ['url'],
+                    limit: 1
+                }
             })
 
             return res.status(200).json(responseJSON(products))
 
         } catch (error) {
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', 'error while fetching data'))
+            console.log(error);
+            return res.status(500).json(responseJSON(null, 'failed', 'error while fetching data'))
 
         }
 
@@ -32,14 +39,18 @@ class ProductController {
 
             const product = await Product.findOne({
                 where: {
-                    id: id
+                    id
                 },
-                attributes: ['sku', 'name', 'description', 'price', 'stock'],
-                include: {
+                attributes: ['name', 'description', 'price', 'stock'],
+                include: [{
                     model: Category,
                     as: 'category',
-                    attributes: ['id', 'name']
-                }
+                    attributes: ['name']
+                }, {
+                    model: Image,
+                    as: 'images',
+                    attributes: ['url']
+                }],
 
             })
 
@@ -51,7 +62,6 @@ class ProductController {
 
         } catch (error) {
 
-            console.log(error)
             return res.status(500).json(responseJSON(null, 'failed', 'error while fetching data'))
 
         }
