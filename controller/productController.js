@@ -10,17 +10,8 @@ class ProductController {
 
         try {
 
-            const products = await Product.findAll({
-                attributes: ['id', 'name', 'price', 'stock'],
-                include: {
-                    model: Image,
-                    as: 'images',
-                    attributes: ['url'],
-                    limit: 1
-                }
-            })
-
-            return res.status(200).json(responseJSON(products))
+            const products = await sequelize.query(`SELECT p.id, p.name, p.price, i."url" AS image FROM "Products" p LEFT JOIN ( SELECT "parentId", "url", ROW_NUMBER() OVER (PARTITION BY "parentId" ORDER BY id) AS rn FROM "Images" ) i ON p."id" = i."parentId" AND i.rn = 1 WHERE ("p"."deletedAt" is NULL) order by "p"."createdAt"`)
+            return res.status(200).json(responseJSON(products[0]))
 
         } catch (error) {
 
@@ -213,7 +204,7 @@ class ProductController {
                 }
 
                 await Image.bulkCreate(imagesPayload, { transaction: t })
-                
+
                 unlink(req.files)
             }
 
