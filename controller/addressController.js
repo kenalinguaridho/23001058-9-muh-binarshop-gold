@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const { responseJSON } = require('../helpers/response');
-const { Address, sequelize } = require('../models')
+const { Address, User, sequelize } = require('../models')
 
 class AddressController {
     static getAllAddresses = async (req, res) => {
@@ -51,18 +51,19 @@ class AddressController {
 
             const { address, receiver, phone, note } = req.body
 
+            const user = await User.findByPk(req.user.id)
+            
             const payload = {
                 userId: req.user.id,
                 address: address,
-                receiver: receiver,
-                phone: phone,
+                receiver: receiver ?? user.dataValues.name,
+                phone: phone ?? user.dataValues.phone,
                 note: note
             }
 
             const addresses = await Address.findAll({
                 where: {
                     [Op.and]: [{ userId: req.user.id }, { isMain: true }]
-
                 }
             })
 
@@ -82,7 +83,7 @@ class AddressController {
                 statusCode = 400
             }
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'failed when create new address'))
+            return res.status(statusCode).json(responseJSON(null, 'failed', 'failed when create new address'))
 
         }
     }
