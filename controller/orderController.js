@@ -99,6 +99,10 @@ class OrderController {
                 }
             })
 
+            if (!activeAddress) {
+                return res.status(400).json(responseJSON(null, 'failed', 'no delivery address found'))
+            }
+
             // Find payment method that user want to use
             const payment = await PaymentMethod.findByPk(paymentId)
 
@@ -169,6 +173,7 @@ class OrderController {
 
         } catch (error) {
 
+            console.log(error);
             // Rolling back the change before meet failed case
             await t.rollback()
 
