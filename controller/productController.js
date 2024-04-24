@@ -6,11 +6,14 @@ const
 
 class ProductController {
 
-    static getAllProducts = async (_, res) => {
+    static getAllProducts = async (req, res) => {
 
         try {
+            let page = req.query.page
 
-            const products = await sequelize.query(`SELECT p.id, p.name, p.price, i."url" AS image FROM "Products" p LEFT JOIN ( SELECT "parentId", "url", ROW_NUMBER() OVER (PARTITION BY "parentId" ORDER BY id) AS rn FROM "Images" ) i ON p."id" = i."parentId" AND i.rn = 1 WHERE ("p"."deletedAt" is NULL) order by "p"."createdAt"`)
+            if (!page) page = 1
+
+            const products = await sequelize.query(`SELECT p.id, p.name, p.price, i.url AS image FROM "Products" p LEFT JOIN ( SELECT "parentId", url, ROW_NUMBER() OVER (PARTITION BY "parentId" ORDER BY id) AS rn FROM "Images" ) i ON p.id = i."parentId" AND i.rn = 1 WHERE ("p"."deletedAt" is NULL) order by "p"."createdAt" limit 10 offset (${page} - 1) * 10`)
             return res.status(200).json(responseJSON(products[0]))
 
         } catch (error) {
