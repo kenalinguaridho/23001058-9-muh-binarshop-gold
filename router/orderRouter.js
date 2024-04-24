@@ -7,9 +7,10 @@ const
 
 
 orderRouter.use(passport.initialize(), Auth.authentication, Auth.authorizeUser)
-orderRouter.get('/', OrderController.getAllOrders)
-orderRouter.get('/:id', OrderController.getOrderById)
-orderRouter.post('/', OrderController.createNewOrder)
-orderRouter.patch('/:id', OrderController.updateOrder)
+orderRouter
+    .get('/', OrderController.getAllOrders)
+    .get('/:id', OrderController.getOrderById)
+    .post('/', OrderController.createNewOrder)
+    .patch('/:id', OrderController.updateOrder)
 
 module.exports = orderRouter
