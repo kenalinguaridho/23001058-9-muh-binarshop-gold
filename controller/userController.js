@@ -1,7 +1,7 @@
 const
     { responseJSON } = require('../helpers/response.js'),
     { User, Image, sequelize } = require('../models'),
-    { Op, where } = require("sequelize"),
+    { Op } = require("sequelize"),
     bcrypt = require('bcryptjs'),
     jwt = require('jsonwebtoken'),
     { unlink } = require('../helpers/unlinkMedia.js'),
