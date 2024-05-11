@@ -11,11 +11,13 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       OrderProduct.belongsTo(models.Order, {
         targetKey: 'id',
+        as: 'order',
         foreignKey: 'orderId'
       })
 
       OrderProduct.belongsTo(models.Product, {
         targetKey: 'id',
+        as: 'product',
         foreignKey: 'productId',
       })
     }
