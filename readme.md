@@ -1,8 +1,8 @@
-# Online Shop Backend
+# Binar Shop
 
 ## Description
 
-The Online Shop Backend is a RESTful API web application designed to support e-commerce functionalities. This application enables users to manage products, orders, users, and inventory efficiently. The API is built using Express.js and documented with Swagger to facilitate easy integration and understanding by other developers.
+Binar Shop is a RESTful API web application designed to support e-commerce functionalities. This application enables users to manage products, orders, users, and inventory efficiently. The API is built using Express.js and documented with Swagger to facilitate easy integration and understanding by other developers.
 
 ## Key Features
 
