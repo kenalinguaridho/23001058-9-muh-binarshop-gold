@@ -1,3 +1,4 @@
+const { CustomError } = require('../errors/customError.js');
 const
     { responseJSON } = require('../helpers/response.js'),
     { User, Image, sequelize } = require('../models'),
@@ -6,141 +7,43 @@ const
     jwt = require('jsonwebtoken'),
     { unlink } = require('../helpers/unlinkMedia.js'),
     Cloudinary = require('../lib/cloudinary.js'),
-    { mailer } = require('../lib/mailer.js');
+    { UserService } = require('../services/userService.js');
 
 require('dotenv').config()
 
 class UserController {
 
-    static registerUser = async (req, res) => {
-
-        const t = await sequelize.transaction()
+    static registerUser = async (req, res, next) => {
+        
         try {
 
-            let { name, username, email, phone, password, rePassword } = req.body
+            const newUser = await UserService.register(req)
 
-            if (rePassword != password) {
-                return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
-            }
-
-            const userPayload = {
-                name: name,
-                username: username,
-                email: email,
-                phone: phone,
-                password: password
-            }
-
-            let user = await User.create(userPayload, { transaction: t })
-
-            if (req.file) {
-
-                const imageResult = await Cloudinary.upload(req.file.path)
-
-                unlink(req.file)
-
-                const imagePayload = {
-                    usage: 'avatar',
-                    parentId: user.dataValues.id,
-                    url: imageResult.secure_url,
-                    publicId: imageResult.public_id
-                }
-
-                await Image.create(imagePayload, { transaction: t })
-
-            }
-
-            mailer(user)
-
-            await t.commit()
-
-            return res.status(201).json(responseJSON(user.dataValues))
+            return res.status(201).json(responseJSON(newUser))
 
 
         } catch (error) {
 
-            await t.rollback()
-
-            if (req.file) {
-                unlink(req.file)
-            }
-
-            let statusCode = 500
-
-            if (error.name === 'SequelizeUniqueConstraintError') {
-                statusCode = 409
-            } else if (error.name === 'SequelizeValidationError') {
-                statusCode = 400
-            }
-
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while creating new user'))
+            next(error)
 
         }
 
     }
 
-    static registerAdmin = async (req, res) => {
-
-        const t = await sequelize.transaction()
-
+    static registerAdmin = async (req, res, next) => {
+        
         try {
 
-            let { name, username, email, phone, password, rePassword } = req.body
+            req.body.isAdmin = true
 
-            if (rePassword != password) {
-                return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
-            }
+            const newUser = await UserService.register(req)
 
-            const data = {
-                name: name,
-                username: username,
-                email: email,
-                phone: phone,
-                isAdmin: true,
-                password: password
-            }
-
-            const user = await User.create(data, { transaction: t })
-
-            if (req.file) {
-
-                const imageResult = await Cloudinary.upload(req.file.path)
-
-                unlink(req.file)
-
-                const imagePayload = {
-                    usage: 'avatar',
-                    parentId: user.dataValues.id,
-                    url: imageResult.secure_url,
-                    publicId: imageResult.public_id
-                }
-
-                await Image.create(imagePayload, { transaction: t })
-
-            }
-
-            mailer(user)
-
-            await t.commit()
-
-            return res.status(201).json(responseJSON(user.dataValues))
+            return res.status(201).json(responseJSON(newUser))
 
 
         } catch (error) {
 
-            await t.rollback()
-
-            unlink(req.file)
-
-            let statusCode = 500
-
-            if (error.name === 'SequelizeUniqueConstraintError') {
-                statusCode = 409
-            } else if (error.name === 'SequelizeValidationError') {
-                statusCode = 400
-            }
-
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while creating new user'))
+            next(error)
 
         }
 
@@ -165,18 +68,22 @@ class UserController {
                 }
             })
 
+            console.log("User ==> ", user.dataValues);
+
             if (!user) {
-                return res.status(404).json(responseJSON(null, 'failed', 'user not found'))
+                throw new CustomError('user not found')
             }
 
             if (!user.isActive) {
-                return res.status(403).json(responseJSON(null, 'failed', 'user is inactive'))
+                throw new CustomError('user not found')
             }
 
             const passwordCompared = bcrypt.compareSync(payload.password, user.dataValues.password)
 
+            console.log("password compared ==> ", passwordCompared);
+
             if (!passwordCompared) {
-                return res.status(404).json(responseJSON(null, 'failed', 'user not found'))
+                throw new CustomError('user not found')
             }
 
             const data = {
@@ -187,6 +94,8 @@ class UserController {
             }
 
             let accessToken = jwt.sign(data, process.env.SECRET_KEY)
+
+            console.log("Access Token ==> ", accessToken);
 
             data.accessToken = accessToken
 
@@ -200,28 +109,17 @@ class UserController {
 
     }
 
-    static getUser = async (req, res) => {
+    static getUser = async (req, res, next) => {
 
         try {
 
-            const user = await User.findByPk(
-                req.user.id,
-                {
-                    attributes: ['name', 'username'],
-                    include: {
-                        model: Image,
-                        as: 'image',
-                        attributes: ['url']
-                    },
-                })
-
-            if (!user) throw error
+            const user = await UserService.getUser(req.user.id)
 
             return res.status(200).json(responseJSON(user))
 
         } catch (error) {
 
-            return res.status(500).json(responseJSON(null, 'failed', 'failed while fetch data'))
+            next(error)
 
         }
 
