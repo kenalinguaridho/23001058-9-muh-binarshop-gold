@@ -34,9 +34,23 @@ Binar Shop is a RESTful API web application designed to support e-commerce funct
 
 ### Installation
 
-Clone this repository and install the dependencies using npm:
+#### 1. Clone this repository and install the dependencies using npm
 
 ```sh
 git clone https://github.com/kenalinguaridho/23001058-9-muh-binarshop-gold.git
+```
+#### 2. Change your directory to 23001058-9-muh-binarshop-gold
+```sh
 cd 23001058-9-muh-binarshop-gold
+```
+#### 3. Install the dependencies
+```sh
 npm install
+```
+#### 4. Configure Environment Variable
+#### 5. Run the app
+```sh
+npm start
+```
+
+## Usage
