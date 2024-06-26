@@ -1,14 +1,22 @@
-const responseJSON = (data, status, message) => {
-    
+const responseJSON = (data) => {
     let response = {
         data: data ? data:null,
-        status: status ? status : 'success'
+        status: 'success'
     }
 
-    if(message && message != undefined && Object.keys(message).length != 0) response['message'] = message
-
     return response
-
 }
 
-module.exports = { responseJSON }
+const dataPicker = (object, array) => {
+    const result = {}
+
+    for (let i = 0; i < array.length; i++) {
+        if (array[i] in object) {
+            result[array[i]] = object[array[i]]
+        }
+    }
+
+    return result
+}
+
+module.exports = { responseJSON, dataPicker }
