@@ -1,8 +1,14 @@
 'use strict';
-const { hashSync } = require('bcryptjs');
+const 
+  { hashSync } = require('bcryptjs'),
+  CryptoJS = require('crypto-js');
+
+require('dotenv').config()
+
 const {
   Model
 } = require('sequelize');
+const Encryptor = require('../lib/encrypt');
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     /**
@@ -136,6 +142,7 @@ module.exports = (sequelize, DataTypes) => {
     user.password = hashedPassword
     user.username = user.username.toLowerCase()
     user.email = user.email.toLowerCase()
+    Encryptor.encrypt(user, ['name', 'username', 'email', 'phone'], process.env.CRYPTO_SECRET_KEY)
   })
 
   User.beforeUpdate(user => {
