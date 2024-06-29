@@ -1,13 +1,9 @@
-const { CustomError } = require('../errors/customError.js');
 const
     { responseJSON } = require('../helpers/response.js'),
     { User, Image, sequelize } = require('../models'),
-    { Op } = require("sequelize"),
-    bcrypt = require('bcryptjs'),
-    jwt = require('jsonwebtoken'),
     { unlink } = require('../helpers/unlinkMedia.js'),
     Cloudinary = require('../lib/cloudinary.js'),
-    { UserService } = require('../services/userService.js');
+    { UserService } = require('../services/userService.js')
 
 require('dotenv').config()
 
@@ -49,7 +45,7 @@ class UserController {
 
     }
 
-    static login = async (req, res) => {
+    static login = async (req, res, next) => {
 
         try {
 
@@ -60,50 +56,13 @@ class UserController {
                 password: password ?? ''
             }
 
-            payload.userLogin = payload.userLogin.toLowerCase()
+            const accessToken = await UserService.login(payload)
 
-            let user = await User.findOne({
-                where: {
-                    [Op.or]: [{ username: payload.userLogin }, { email: payload.userLogin }]
-                }
-            })
-
-            console.log("User ==> ", user.dataValues);
-
-            if (!user) {
-                throw new CustomError('user not found')
-            }
-
-            if (!user.isActive) {
-                throw new CustomError('user not found')
-            }
-
-            const passwordCompared = bcrypt.compareSync(payload.password, user.dataValues.password)
-
-            console.log("password compared ==> ", passwordCompared);
-
-            if (!passwordCompared) {
-                throw new CustomError('user not found')
-            }
-
-            const data = {
-                id: user.dataValues.id,
-                username: user.dataValues.username,
-                isAdmin: user.dataValues.isAdmin,
-                isActive: user.dataValues.isActive
-            }
-
-            let accessToken = jwt.sign(data, process.env.SECRET_KEY)
-
-            console.log("Access Token ==> ", accessToken);
-
-            data.accessToken = accessToken
-
-            return res.status(200).json(responseJSON(data))
+            return res.status(200).json(responseJSON(accessToken))
 
         } catch (error) {
 
-            return res.status(500).json(responseJSON(null, 'failed', error.message))
+            next(error)
 
         }
 
