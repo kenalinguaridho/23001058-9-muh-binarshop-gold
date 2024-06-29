@@ -1,3 +1,4 @@
+const Encryptor = require('../lib/encrypt.js')
 const
     { Image, User, sequelize } = require('../models'),
     { Op } = require('sequelize'),
@@ -98,6 +99,8 @@ class UserService {
         try {
 
             payload.userLogin = payload.userLogin.toLowerCase()
+
+            Encryptor.encrypt(payload, ['userLogin'], process.env.CRYPTO_SECRET_KEY)
 
             let user = await User.findOne({
                 where: {
