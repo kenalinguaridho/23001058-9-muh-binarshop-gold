@@ -14,8 +14,8 @@ class DataManipulationService {
         try {
             const data = await model.findByPk(identifier, options)
 
-            if (!data) throw new CustomError('No record found')
-                
+            if (!data) throw new CustomError('No record found', 404)
+
             return data
         } catch (error) {
             throw error
