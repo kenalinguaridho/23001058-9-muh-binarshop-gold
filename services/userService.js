@@ -1,9 +1,13 @@
 const
     { Image, User, sequelize } = require('../models'),
+    { Op } = require('sequelize'),
     { unlink } = require('../helpers/unlinkMedia.js'),
     { dataPicker } = require('../helpers/response.js'),
     { DataManipulationService } = require('./dataManipulationService.js'),
-    Cloudinary = require('../lib/cloudinary')
+    Cloudinary = require('../lib/cloudinary'),
+    jwt = require('jsonwebtoken'),
+    bcrypt = require('bcryptjs'),
+    { CustomError } = require('../errors/customError.js')
 
 class UserService {
 
@@ -72,7 +76,7 @@ class UserService {
     static getUser = async (identifier) => {
 
         try {
-            
+
             const user = await DataManipulationService.findById(User, identifier, {
                 attributes: ['name', 'username'],
                 include: {
@@ -83,10 +87,47 @@ class UserService {
             })
 
             return user
-            
+
         } catch (error) {
             throw error
         }
+    }
+
+    static login = async (payload) => {
+
+        try {
+
+            payload.userLogin = payload.userLogin.toLowerCase()
+
+            let user = await User.findOne({
+                where: {
+                    [Op.or]: [{ username: payload.userLogin }, { email: payload.userLogin }, { phone: payload.userLogin }]
+                }
+            })
+
+            if (!user) throw error
+
+            if (!user.isActive) throw error
+
+            const passwordCompared = bcrypt.compareSync(payload.password, user.dataValues.password)
+
+            if (!passwordCompared) throw error
+
+            const data = {
+                id: user.dataValues.id,
+                username: user.dataValues.username,
+                isAdmin: user.dataValues.isAdmin,
+                isActive: user.dataValues.isActive
+            }
+
+            let accessToken = jwt.sign(data, process.env.SECRET_KEY)
+
+            return accessToken
+
+        } catch (error) {
+            throw new CustomError('user not found', 404, error)
+        }
+
     }
 
 }
