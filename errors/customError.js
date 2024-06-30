@@ -9,8 +9,6 @@ class CustomError extends Error {
         const errors = {}
         let statusCode = 400
 
-        console.log("SEQUELIZE ERROR ==> ", sequelizeError);
-
         for (let i = 0; i < sequelizeError.errors.length; i++) {
             errors[sequelizeError.errors[i]["path"]] = sequelizeError.errors[i].message
         }
