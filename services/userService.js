@@ -78,14 +78,17 @@ class UserService {
 
         try {
 
-            const user = await DataManipulationService.findById(User, identifier, {
-                attributes: ['name', 'username'],
+            const userAttributes = ['name', 'username']
+            let user = await DataManipulationService.findById(User, identifier, {
+                attributes: userAttributes,
                 include: {
                     model: Image,
                     as: 'image',
                     attributes: ['url']
                 },
             })
+
+            user = Encryptor.decrypt(user, userAttributes)
 
             return user
 
@@ -100,7 +103,7 @@ class UserService {
 
             payload.userLogin = payload.userLogin.toLowerCase()
 
-            Encryptor.encrypt(payload, ['userLogin'], process.env.CRYPTO_SECRET_KEY)
+            Encryptor.encrypt(payload, ['userLogin'])
 
             let user = await User.findOne({
                 where: {
