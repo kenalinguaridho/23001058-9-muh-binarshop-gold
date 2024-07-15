@@ -7,8 +7,8 @@ const
     { UserController } = require('../controller/userController.js');
 
 userRouter
-    .post('/register', upload.single('avatar'), UserController.registerUser)
-    .post('/admin/register', upload.single('avatar'), UserController.registerAdmin)
+    .post('/register', UserController.registerUser)
+    .post('/admin/register', UserController.registerAdmin)
     .post('/login', UserController.login)
     .get('/verify/:id', UserController.verifyUser)
 
