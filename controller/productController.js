@@ -1,6 +1,7 @@
+const { CustomError } = require('../errors/customError.js')
 const
     { responseJSON } = require('../helpers/response.js'),
-    { unlink } = require('../helpers/unlinkMedia.js'),
+    { unlinkMultiple } = require('../helpers/unlinkMedia.js'),
     { Product, Category, Image, sequelize } = require('../models'),
     Cloudinary = require('../lib/cloudinary.js')
 
@@ -9,12 +10,25 @@ class ProductController {
     static getAllProducts = async (req, res) => {
 
         try {
+
+            console.log("Get all products start", req.route.methods);
+            
+
             let page = req.query.page
 
             if (!page) page = 1
 
             const products = await sequelize.query(`SELECT p.id, p.name, p.price, i.url AS image FROM "Products" p LEFT JOIN ( SELECT "parentId", url, ROW_NUMBER() OVER (PARTITION BY "parentId" ORDER BY id) AS rn FROM "Images" ) i ON p.id = i."parentId" AND i.rn = 1 WHERE ("p"."deletedAt" is NULL) order by "p"."createdAt" limit 10 offset (${page} - 1) * 10`)
-            return res.status(200).json(responseJSON(products[0]))
+            
+            const arrayProducts = products[0]
+            
+            arrayProducts.forEach(product => {
+                if (product.image === null) {
+                    product.image = ""
+                }
+            });
+
+            return res.status(200).json(responseJSON(arrayProducts))
 
         } catch (error) {
 
@@ -25,7 +39,7 @@ class ProductController {
 
     }
 
-    static getProductById = async (req, res) => {
+    static getProductById = async (req, res, next) => {
 
         try {
 
@@ -49,14 +63,14 @@ class ProductController {
             })
 
             if (!product) {
-                return res.status(404).json(responseJSON(null, 'failed', `no product with id ${id}`))
+                throw new CustomError('Data not found', 404, `Product with id ${id} not found`)
             }
 
             return res.status(200).json(responseJSON(product))
 
         } catch (error) {
 
-            return res.status(500).json(responseJSON(null, 'failed', 'error while fetching data'))
+            next(error)
 
         }
 
@@ -94,10 +108,15 @@ class ProductController {
 
             const product = await Product.create(payload, { transaction: t })
 
-            if (req.files) {
+            if (req.files.length > 0) {
+
                 let imagesPayload = []
+
                 for (let i = 0; i < req.files.length; i++) {
+                    console.log("PATH ==> ", req.files[i].path);
+                    
                     let imageResult = await Cloudinary.upload(req.files[i].path)
+                                       
                     arrOfPublicId.push(imageResult.public_id)
 
                     let imagePayload = {
@@ -111,7 +130,7 @@ class ProductController {
                 }
                 await Image.bulkCreate(imagesPayload, { transaction: t })
 
-                unlink(req.files)
+                unlinkMultiple(req.files)
             }
 
             await t.commit()
@@ -125,12 +144,12 @@ class ProductController {
             let errorMessage
 
             if (arrOfPublicId.length != 0) {
-                unlink(req.files)
+                unlinkMultiple(req.files)
                 await Cloudinary.rollback(arrOfPublicId)
                 errorMessage = 'error while upload images'
             }
 
-            let statusCode = 500
+            let statusCode
 
             if (error.name === 'SequelizeUniqueConstraintError') {
                 statusCode = 409
@@ -140,7 +159,7 @@ class ProductController {
                 statusCode = 400
             }
 
-            return res.status(statusCode).json(responseJSON(null, 'failed', errorMessage))
+            return res.status(statusCode || 500).json(responseJSON(null, 'failed', errorMessage))
 
         }
 
