@@ -227,7 +227,7 @@ class ProductController {
 
                 await Image.bulkCreate(imagesPayload, { transaction: t })
 
-                unlink(req.files)
+                unlinkMultiple(req.files)
             }
 
             await product.update(payload, {
@@ -256,7 +256,7 @@ class ProductController {
             await t.rollback()
 
             if (req.files.length > 0) {
-                unlink(req.files)
+                unlinkMultiple(req.files)
             }
 
             if (incomingPublicIds.length > 0) {
