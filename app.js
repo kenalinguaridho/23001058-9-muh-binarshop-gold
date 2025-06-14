@@ -19,7 +19,7 @@ app.use((err, req, res, next) => {
     }
 
     res.status(err.statusCode || 500).json({
-        status: 'failed',
+        status: 'Failed',
         errors: err.message || 'Internal Server Error',
         details: err.details || {},
     });
@@ -27,7 +27,7 @@ app.use((err, req, res, next) => {
 
 app.use((req, res, next) => {
     res.status(404).json({
-        status:'failed',
+        status:'Failed',
         errors:'API endpoint not found'
     })
 })
