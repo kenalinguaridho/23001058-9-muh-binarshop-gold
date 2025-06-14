@@ -58,7 +58,11 @@ class UserController {
 
             const accessToken = await UserService.login(payload)
 
-            return res.status(200).json(responseJSON(accessToken))
+            const data = {}
+
+            data.authToken = accessToken
+
+            return res.status(200).json(responseJSON(data))
 
         } catch (error) {
 
@@ -72,7 +76,7 @@ class UserController {
 
         try {
 
-            const user = await UserService.getUser(req.user.id)
+            const user = await UserService.getUser(req)
 
             return res.status(200).json(responseJSON(user))
 
@@ -82,116 +86,53 @@ class UserController {
 
         }
 
-
     }
 
-    static editUser = async (req, res) => {
-
-        const t = await sequelize.transaction()
+    static editUser = async (req, res, next) => {
 
         try {
 
-            let { name, username, email, phone, address, password, rePassword } = req.body
-
-            let id = req.user.id
-
-            if (rePassword != password) {
-                return res.status(400).json(responseJSON(null, 'failed', 'password is not consistent'))
-            }
-
-            const user = await User.findByPk(id)
-
-            const payload = {
-                name: name ?? user.dataValues.name,
-                username: username ?? user.dataValues.username,
-                email: email ?? user.dataValues.email,
-                phone: phone ?? user.dataValues.phone,
-                address: address ?? user.dataValues.address,
-                password: password ?? user.dataValues.password
-            }
-
-            await user.update(payload, {
-                where: {
-                    id
-                },
-                individualHooks: true,
-                transaction: t
-            })
-
-            await t.commit()
-
-            return res.status(200).json(responseJSON(user))
-
-        } catch (error) {
-
-            let statusCode = 500
-
-            if (req.file) {
-                unlink(req.file)
-            }
-
-            if (error.name === 'SequelizeValidationError') {
-                statusCode = 400
-            }
-            await t.rollback()
-
-            return res.status(statusCode).json(responseJSON(null, 'failed', error.errors[0].message ?? 'error while updating data'))
-
-        }
-
-    }
-
-    static deleteUser = async (req, res) => {
-
-        try {
-
-            let id = req.user.id
-
-            const userDeleted = await User.destroy({
-                where: {
-                    id: id
-                }
-            })
-
-            if (userDeleted = 0) {
-                throw error
-            }
+            await UserService.editUser(req)
 
             return res.status(200).json(responseJSON(null))
 
         } catch (error) {
 
-            return res.status(500).json(responseJSON(null, 'failed', `failed while deleting account`))
+            next(error)
 
         }
 
     }
 
-    static verifyUser = async (req, res) => {
+    static deleteUser = async (req, res, next) => {
+
+        try {
+
+            await UserService.deleteUser(req)
+
+            return res.status(200).json(responseJSON(null))
+
+        } catch (error) {
+
+            next(error)
+
+        }
+
+    }
+
+    static verifyUser = async (req, res, next) => {
 
         try {
 
             const id = req.params.id
 
-            const user = await User.findByPk(id)
-
-            if (!user || user.dataValues.isActive) {
-                return res.status(403).json(responseJSON(null, 'failed', 'no user verified'))
-            }
-
-            await User.update({
-                isActive: true
-            }, {
-                where: {
-                    id: id
-                }
-            })
+            await UserService.verifyUser(id)
 
             return res.status(200).json(responseJSON(null))
 
         } catch (error) {
 
-            return res.status(500).json(responseJSON(null, 'failed', error.message))
+            next(error)
 
         }
 
