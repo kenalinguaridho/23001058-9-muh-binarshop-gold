@@ -1,32 +1,48 @@
-const { CustomError } = require("../errors/customError")
+module.exports = class DataManipulationService {
+    static create = async ({ model, payload, options }) => {
 
-class DataManipulationService {
-    static create = async (model, payload, options) => {
-        try {
-            const newData = await model.create(payload, options)
-            return newData
-        } catch (error) {
-            throw error
-        }
+        return await model.create(payload, options)
+
     }
 
-    static findById = async (model, identifier, options) => {
-        try {
-            const data = await model.findByPk(identifier, options)
+    static findAll = async ({ model, options }) => {
 
-            if (!data) throw new CustomError('No record found', 404)
+        return await model.findAll(...options)
 
-            return data
-        } catch (error) {
-            throw error
-        }
     }
 
-    // static getAll = async (model) => {
+    static findById = async (model, id, options) => {
 
-    // }
+        return await model.findByPk(id, options)
 
-    // static getById = async ()
+    }
+
+    static update = async ({ model, payload, id, options }) => {
+
+        return await model.update(payload, {
+            where: { id: id },
+            ...options
+        })
+
+    }
+
+    static delete = async ({ model, id, options }) => {
+
+        return await model.destroy({
+            where: { id },
+            ...options
+        })
+
+    }
+
+    static increment = async ({ object, field, value, options }) => {
+
+        return await object.increment(
+            field,
+            { by: value },
+            options
+        )
+
+    }
+
 }
-
-module.exports = { DataManipulationService }

@@ -1,11 +1,8 @@
-const Encryptor = require('../lib/encrypt.js')
 const
-    { Image, User, sequelize } = require('../models'),
+    { Image, User } = require('../models'),
     { Op } = require('sequelize'),
-    { unlink } = require('../helpers/unlinkMedia.js'),
     { dataPicker } = require('../helpers/response.js'),
-    { DataManipulationService } = require('./dataManipulationService.js'),
-    Cloudinary = require('../lib/cloudinary'),
+    DataManipulationService = require('./dataManipulationService.js'),
     jwt = require('jsonwebtoken'),
     bcrypt = require('bcryptjs'),
     { CustomError } = require('../errors/customError.js')
@@ -13,10 +10,6 @@ const
 class UserService {
 
     static register = async (req) => {
-
-        const t = await sequelize.transaction()
-
-        let imageResult = {}
 
         try {
 
@@ -35,26 +28,10 @@ class UserService {
                 isAdmin: req.body.isAdmin
             }
 
-            const newUser = await DataManipulationService.create(User, userPayload, { transaction: t })
-
-            if (req.file) {
-
-                imageResult = await Cloudinary.upload(req.file.path)
-
-                unlink(req.file)
-
-                const imagePayload = {
-                    usage: 'avatar',
-                    parentId: newUser.dataValues.id,
-                    url: imageResult.secure_url,
-                    publicId: imageResult.public_id
-                }
-
-                await DataManipulationService.create(Image, imagePayload, { transaction: t })
-
-            }
-
-            await t.commit()
+            const newUser = await DataManipulationService.create({
+                model: User,
+                payload: userPayload,
+            })
 
             const userResponse = dataPicker(newUser, ['name', 'username', 'email', 'phone', 'isAdmin'])
 
@@ -62,38 +39,39 @@ class UserService {
 
         } catch (error) {
 
-            await t.rollback()
-
-            if (imageResult) {
-                await Cloudinary.rollback(imageResult.public_id)
-            }
-
             throw error
 
         }
 
     }
 
-    static getUser = async (identifier) => {
+    static getUser = async (req) => {
 
         try {
 
             const userAttributes = ['name', 'username']
-            let user = await DataManipulationService.findById(User, identifier, {
-                attributes: userAttributes,
-                include: {
-                    model: Image,
-                    as: 'image',
-                    attributes: ['url']
-                },
-            })
 
-            user = Encryptor.decrypt(user, userAttributes)
+            const id = req.user.id
+
+            const user = await DataManipulationService.findById(
+                User,
+                id,
+                {
+                    attributes: userAttributes,
+                    include: {
+                        model: Image,
+                        as: 'image',
+                        attributes: ['url']
+                    },
+                }
+            )
 
             return user
 
         } catch (error) {
-            throw error
+
+            return error
+
         }
     }
 
@@ -103,21 +81,19 @@ class UserService {
 
             payload.userLogin = payload.userLogin.toLowerCase()
 
-            Encryptor.encrypt(payload, ['userLogin'])
-
             let user = await User.findOne({
                 where: {
                     [Op.or]: [{ username: payload.userLogin }, { email: payload.userLogin }, { phone: payload.userLogin }]
                 }
             })
 
-            if (!user) throw error
-
-            if (!user.isActive) throw error
+            if (!user) throw new CustomError('Login failed', 404, 'User not found')
 
             const passwordCompared = bcrypt.compareSync(payload.password, user.dataValues.password)
 
-            if (!passwordCompared) throw error
+            if (!passwordCompared) throw new CustomError('Login failed', 404, 'User not found')
+
+            if (!user.isActive) throw new CustomError('Login failed', 400, 'User is not verified')
 
             const data = {
                 id: user.dataValues.id,
@@ -131,7 +107,127 @@ class UserService {
             return accessToken
 
         } catch (error) {
-            throw new CustomError('user not found', 404, error)
+
+            throw error
+
+        }
+
+    }
+
+    static verifyUser = async (id) => {
+
+        try {
+
+            const user = await DataManipulationService.findById(
+                User,
+                id,
+                {
+                    attributes: ['id', 'isActive']
+                }
+            )
+
+            if (!user) {
+                throw new CustomError('User verify failed', 404, `No user found with id ${id}`)
+            }
+
+            if (user.isActive) {
+                throw new CustomError('User verify failed', 400, `User with id ${id} is already active`)
+            }
+
+            const updatedUserCount = await DataManipulationService.update({
+                model: User,
+                payload: {
+                    isActive: true
+                },
+                id: id
+            })
+
+            if (updatedUserCount === 0) {
+                throw new CustomError('User verify failed', 500, `Failed to update user with id ${id}`)
+            }
+
+            return updatedUserCount
+
+        } catch (error) {
+
+            throw error
+
+        }
+
+    }
+
+    static editUser = async (req) => {
+
+        try {
+
+            let { name, username, email, phone, address, password } = req.body
+
+            if (req.body.password || req.body.rePassword) {
+                if (!req.body.password || !req.body.rePassword) {
+                    throw new CustomError('Password Confirmation Error', 400, {
+                        password: 'Both password and rePassword must be provided',
+                    });
+                }
+                if (req.body.password !== req.body.rePassword) {
+                    throw new CustomError('Password Confirmation Error', 400, {
+                        password: 'Password and rePassword did not match',
+                    });
+                }
+            }
+
+            const id = req.user.id
+
+            const user = await DataManipulationService.findById(User, id)
+
+            if (!user) throw new CustomError('Update data failed', 404, 'No user match with id')
+
+            const payload = {
+                name: name ?? user.dataValues.name,
+                username: username ?? user.dataValues.username,
+                email: email ?? user.dataValues.email,
+                phone: phone ?? user.dataValues.phone,
+                address: address ?? user.dataValues.address,
+                password: password ?? user.dataValues.password
+            }
+
+            const userUpdate = await DataManipulationService.update({
+                model: User,
+                payload: payload,
+                id: id,
+            })
+
+            if (userUpdate === 0) {
+                throw new CustomError('Update data failed', 400, 'No data updated')
+            }
+
+        } catch (error) {
+
+            throw error
+
+        }
+
+    }
+
+    static deleteUser = async (req) => {
+
+        try {
+
+            const userDeleted = await DataManipulationService.delete({
+                model: User,
+                id: req.user.id
+            })
+
+            if (userDeleted === 0) {
+                throw new CustomError('Delete user failed', 400, 'No user deleted')
+            }
+
+            console.log("After Deletion");
+            
+
+        } catch (error) {
+
+            throw error
+
         }
 
     }
