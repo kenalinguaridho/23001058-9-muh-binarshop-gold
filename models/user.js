@@ -142,7 +142,6 @@ module.exports = (sequelize, DataTypes) => {
     user.password = hashedPassword
     user.username = user.username.toLowerCase()
     user.email = user.email.toLowerCase()
-    Encryptor.encrypt(user, ['name', 'username', 'email', 'phone'])
   })
 
   User.beforeUpdate(user => {
@@ -150,7 +149,6 @@ module.exports = (sequelize, DataTypes) => {
     user.password = hashedPassword
     user.username = user.username.toLowerCase()
     user.email = user.email.toLowerCase()
-    Encryptor.encrypt(user, ['name', 'username', 'email', 'phone'])
   })
 
   return User;
