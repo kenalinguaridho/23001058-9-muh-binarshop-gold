@@ -34,6 +34,16 @@ module.exports = {
         password: '$2a$10$xVnvcW45TIdhr/QIOfNVZ.ko8THl1xQE7YxCX/FCUJWC2sKExU1fe',
       },
       {
+        id: '103521e7-3eec-4505-a6f6-c25b6f27a05b',
+        name: 'User Customer Not Verified',
+        username: 'customernotverified',
+        email: 'customernotverified@example.com',
+        phone: '0898918976652',
+        isAdmin: false,
+        isActive: false,
+        password: '$2a$10$xVnvcW45TIdhr/QIOfNVZ.ko8THl1xQE7YxCX/FCUJWC2sKExU1fe',
+      },
+      {
         id: '53db2b23-4175-4119-9c2d-85bc9cf56847',
         name: 'User Admin',
         username: 'admin',
